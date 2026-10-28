@@ -1,0 +1,19 @@
+{
+  "name": "anima-pay",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Agents can spend. Make them bring receipts. An AI payment assistant on the PayPal sandbox where only a mandate and a human can release money, and every payment that does not happen is explained and proven.",
+  "license": "Apache-2.0",
+  "author": "Hichem Benali",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node src/server.ts",
+    "test": "node --test test/*.test.ts",
+    "smoke": "node scripts/sandbox-smoke.ts",
+    "mcp-check": "node scripts/mcp-check.ts",
+    "agent-demo": "node scripts/mcp-agent-demo.ts"
+  }
+}

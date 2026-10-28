@@ -1,0 +1,39 @@
+# ANIMA hosted demo on Render (free web service). Isolation contract: this service sees this
+# repository and its own PayPal sandbox app, nothing else: no other host, no private network, no
+# chat bot, no shared drive, no broker, no personal secret.
+# Deploy only a reviewed, frozen commit: auto-deploy stays off.
+services:
+  - type: web
+    name: anima-demo
+    runtime: node
+    plan: free
+    autoDeploy: false
+    # No dependency to install; the server is plain Node 24.
+    buildCommand: node --version
+    startCommand: node src/server.ts
+    # A static file: probing the page itself would open a visitor session at every probe.
+    healthCheckPath: /style.css
+    envVars:
+      - key: NODE_VERSION
+        value: 24.18.0
+      - key: HOST
+        value: 0.0.0.0
+      - key: ANIMA_HOSTED
+        value: "1"
+      # The exact https origin is this service's own address, which Render sets (RENDER_EXTERNAL_URL).
+      # Only for a custom domain, add ANIMA_PUBLIC_ORIGIN=https://that.domain by hand.
+      # The hosted demo answers with scripted advice: no model credential on this host.
+      - key: ANIMA_HOSTED_MODEL
+        value: "0"
+      - key: ANIMA_SCENE_BUDGET
+        value: "40"
+      - key: ANIMA_GLOBAL_SCENE_BUDGET
+        value: "200"
+      - key: ANIMA_MAX_SESSIONS
+        value: "50"
+      # A dedicated ANIMA sandbox app, set by hand in the dashboard; never a live PayPal credential
+      # (the code refuses any non-sandbox endpoint anyway).
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false

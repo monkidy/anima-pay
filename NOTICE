@@ -1,0 +1,14 @@
+ANIMA
+Copyright 2026 Hichem Benali
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+It reuses, under the same license and by the same author:
+
+- ace-receipts 0.2.0 (npm, Apache-2.0, June 2026): the verdict vocabulary (pass / hold / fail),
+  the one-line verdict phrases and the Gate Wizard, applied here to payments instead of diffs.
+- Agent Governance Receipt Standard v0 (Apache-2.0, June 2026): the Mandate, Next Best Action,
+  Outbound Action Receipt and Refusal Receipt shapes behind src/model.ts and src/receipt.ts.
+
+The hostile test battery is adapted from an earlier private prototype by the same author, written
+on synthetic data only. No third-party code is vendored.
