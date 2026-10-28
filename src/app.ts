@@ -278,7 +278,7 @@ export class AnimaApp {
   }
 
   trust(merchant: string) {
-    return merchantTrust(merchant, MANDATE.human_release_above_cents, this.ledger.all(), this.ledger.grants());
+    return merchantTrust(merchant, MANDATE.human_release_above_cents, this.ledger.sealedEntries());
   }
 
   /** A person accepts the agent's proposed step for one merchant. The grant is sealed in the chain. */

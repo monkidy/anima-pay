@@ -3,7 +3,7 @@
 // (pay alone up to some amount); only a person's sealed grant makes it real. The first anomaly
 // voids every grant made before it, and the count starts again from zero.
 
-import type { PaymentReceipt } from "./receipt.ts";
+import type { Ledger } from "./ledger.ts";
 
 /** Findings that say something went wrong or looked wrong with this merchant. */
 export const ANOMALIES = new Set([
@@ -40,41 +40,48 @@ export function steps(ceilingCents: number): number[] {
 }
 
 /**
- * Computes one merchant's trust from the sealed record alone: receipts, corrections (a correction
- * means the agent was wrong: an anomaly) and grants, in time order. Pure and replayable.
+ * Reconstruct one merchant's autonomy from the SEALED APPEND ORDER, not timestamps.
+ * Timestamp ties and clock drift must never allow an older grant to erase a later
+ * anomaly. Ledger entries are already in the signed sequence that produced them.
+ * This is a read-only projection: all authorization still lives elsewhere.
  */
-export function merchantTrust(merchant: string, ceilingCents: number, receipts: readonly PaymentReceipt[], grants: readonly TrustGrant[]): MerchantTrust {
-  type Ev = { at: string; kind: "paid" | "anomaly" | "grant"; id: string; reason?: string; cents?: number };
-  const events: Ev[] = [];
-  for (const r of receipts) {
-    if (r.request?.merchant !== merchant) continue;
-    const bad = r.findings.find((f) => ANOMALIES.has(f.id));
-    if (bad) events.push({ at: r.created_at, kind: "anomaly", id: r.receipt_id, reason: bad.id });
-    else if (r.money_moved) events.push({ at: r.created_at, kind: "paid", id: r.receipt_id });
-    for (const c of r.corrections) events.push({ at: c.at, kind: "anomaly", id: r.receipt_id, reason: "CORRECTED" });
-  }
-  for (const g of grants) if (g.merchant === merchant) events.push({ at: g.at, kind: "grant", id: g.basis.join(","), cents: g.auto_release_cents });
-  events.sort((a, b) => a.at.localeCompare(b.at));
-
+export function merchantTrust(
+  merchant: string, ceilingCents: number,
+  entries: ReturnType<Ledger["sealedEntries"]>,
+): MerchantTrust {
   let granted = 0;
   let streak: string[] = [];
   let last_anomaly: MerchantTrust["last_anomaly"] = null;
   const curve: MerchantTrust["curve"] = [];
-  for (const e of events) {
-    if (e.kind === "paid") streak.push(e.id);
-    if (e.kind === "anomaly") {
-      if (granted > 0) curve.push({ at: e.at, cents: 0, why: "reset" });
-      granted = 0;
+  const seenReceiptIds = new Set<string>();
+
+  function reset(at: string, id: string, reason: string): void {
+    if (granted > 0) curve.push({ at, cents: 0, why: "reset" });
+    granted = 0;
+    streak = [];
+    last_anomaly = { at, receipt_id: id, reason };
+  }
+
+  for (const entry of entries) {
+    // All four entry types share one cryptographically sequenced append-only log.
+    // A correction can be applied only after its referenced receipt exists.
+    if (entry.schema === "anima.payment_receipt.v0") {
+      if (entry.request.merchant !== merchant) continue;
+      seenReceiptIds.add(entry.receipt_id);
+      const bad = entry.findings.find(f => ANOMALIES.has(f.id));
+      if (bad) reset(entry.created_at, entry.receipt_id, bad.id);
+      else if (entry.money_moved) streak.push(entry.receipt_id);
+    } else if (entry.schema === "anima.correction.v0") {
+      if (seenReceiptIds.has(entry.receipt_id)) reset(entry.at, entry.receipt_id, "CORRECTED");
+    } else if (entry.schema === "anima.trust_grant.v0" && entry.merchant === merchant) {
+      granted = Math.min(entry.auto_release_cents, ceilingCents);
       streak = [];
-      last_anomaly = { at: e.at, receipt_id: e.id, reason: e.reason! };
-    }
-    if (e.kind === "grant") {
-      granted = Math.min(e.cents!, ceilingCents);
-      streak = [];
-      curve.push({ at: e.at, cents: granted, why: "grant" });
+      curve.push({ at: entry.at, cents: granted, why: "grant" });
     }
   }
-  const next = steps(ceilingCents).find((c) => c > granted);
-  const proposal = next !== undefined && streak.length >= STREAK_FOR_STEP ? { to_cents: next, basis: [...streak] } : null;
-  return { merchant, ceiling_cents: ceilingCents, granted_cents: granted, streak: streak.length, last_anomaly, proposal, curve };
+  const next = steps(ceilingCents).find(c => c > granted);
+  const proposal = next !== undefined && streak.length >= STREAK_FOR_STEP
+    ? { to_cents: next, basis: [...streak] } : null;
+  return { merchant, ceiling_cents: ceilingCents, granted_cents: granted,
+    streak: streak.length, last_anomaly, proposal, curve };
 }

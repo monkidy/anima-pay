@@ -40,14 +40,23 @@ const I18N = {
     no_call_tool: "PayPal not asked", tool_call: "The call", tool_tool: "Tool", tool_class: "Class", tool_args: "Arguments", tool_agent: "Agent", tool_released_by: "Released by",
     tool_result: "PayPal's answer", tool_facts: "Facts read from PayPal", tool_ran: "Ran at PayPal",
     tool_read_ok: "PayPal answered ({x}).", tool_read_err: "PayPal answered with an error: {x}",
-    eyebrow: "A gate between AI agents and PayPal", q1: "Can an AI agent spend money without us losing ", q2: "control — or proof", q3: "?",
-    lede: "ANIMA lets an agent propose payments, never make them alone. Money moves only through three locks — the mandate a person wrote, the payer on PayPal, a person's seal — and every outcome, paid or not, leaves a signed receipt.",
-    cta_run: "Run a decision", cta_poison: "Try the poisoned invoice",
+    eyebrow: "A gate between AI agents and PayPal", q1: "An AI wants to pay. ", q2: "ANIMA can say no", q3: ".",
+    lede: "An invoice can fool the model. ANIMA checks the amount, the mandate and human approval before capture. Even a refused payment leaves a signed receipt.",
+    cta_run: "See a guarded payment", cta_poison: "Test the poisoned invoice",
+    next_step: "WHAT IF THE BILL IS LEGITIMATE?", next_clean_title: "Stopping a mistake is only half the story.",
+    next_clean_text: "Now watch an ordinary invoice: the payer and human-release checks still matter.",
+    next_clean_cta: "Compare with a legitimate payment",
     chain_agent: "Agent proposes", chain_mandate: "Your mandate", chain_payer: "Payer on PayPal", chain_seal: "Your seal", chain_receipt: "Signed receipt",
     mandate_kind: "Spend mandate", mandate_signed: "Signed by the account holder · never by the model",
     scenes_hint: "Seven short cases. Each proves one thing, on PayPal's sandbox.",
     status_real: "PayPal sandbox", status_real_v: "real API, test money", status_sim: "Simulated sandbox", status_sim_v: "no PayPal credentials",
     status_last: "Last receipt {t} UTC · #{i}", status_none: "No receipt yet", forensic: "Forensic ledger", receipts_n: "{n} sealed",
+    proof_heading: "Follow the evidence", proof_hint: "Every result is inspectable. These are ledger counts, not an AI accuracy score.",
+    proof_all: "All outcomes", proof_moved: "Money moved", proof_not_moved: "No money moved", proof_corrected: "Corrected",
+    proof_total: "Outcomes recorded", proof_yes: "Money moved", proof_no: "No money moved", proof_fixes: "Corrected",
+    proof_search: "Search by receipt, payee or PayPal reference", proof_search_hint: "Search the evidence…",
+    proof_shown: "{n} of {total} outcomes shown",
+    proof_footnote: "No money moved does not mean PayPal was never contacted: refusals, holds and incomplete captures remain distinct. Click a row for its original receipt and provider evidence.",
     rail_propose: "Propose", rail_challenge: "Challenge", rail_verify: "Verify", rail_mandate: "Mandate", rail_gate: "Gate", rail_payer: "Payer", rail_seal: "Seal", rail_receipt: "Receipt",
     receipt_kind: "Receipt", tool_kind: "Tool call", proof_empty: "No receipt yet. Run a decision: every outcome, paid or not, leaves one here.",
     ev_paypal: "PayPal", ev_approval: "Approval", ev_moved: "Money moved", seal_chain: "chain", seal_hash: "hash", seal_sig: "Ed25519", seal_key: "key",
@@ -101,14 +110,23 @@ const I18N = {
     no_call_tool: "PayPal non sollicité", tool_call: "L'appel", tool_tool: "Outil", tool_class: "Classe", tool_args: "Arguments", tool_agent: "Agent", tool_released_by: "Débloqué par",
     tool_result: "Réponse de PayPal", tool_facts: "Faits lus chez PayPal", tool_ran: "Exécuté chez PayPal",
     tool_read_ok: "PayPal a répondu ({x}).", tool_read_err: "PayPal a répondu par une erreur : {x}",
-    eyebrow: "Une porte entre les agents IA et PayPal", q1: "Un agent IA peut-il dépenser sans qu'on perde ", q2: "le contrôle, ni la preuve", q3: " ?",
-    lede: "ANIMA laisse un agent proposer des paiements, jamais les faire seul. L'argent ne passe que par trois verrous — le mandat écrit par une personne, le payeur sur PayPal, le sceau d'une personne — et chaque issue, payée ou non, laisse un reçu signé.",
-    cta_run: "Lancer une décision", cta_poison: "Essayer la facture piégée",
+    eyebrow: "Une porte entre les agents IA et PayPal", q1: "L'IA veut payer. ", q2: "ANIMA peut dire non", q3: ".",
+    lede: "Une facture peut tromper le modèle. ANIMA vérifie le montant, le mandat et l'accord humain avant l'encaissement. Même un paiement refusé laisse un reçu signé.",
+    cta_run: "Voir un paiement encadré", cta_poison: "Tester la facture piégée",
+    next_step: "ET SI LA FACTURE EST LÉGITIME ?", next_clean_title: "Arrêter une erreur n'est que la moitié de l'histoire.",
+    next_clean_text: "Compare maintenant avec une facture ordinaire : l'accord du payeur et les autorisations humaines comptent toujours.",
+    next_clean_cta: "Comparer avec un paiement légitime",
     chain_agent: "L'agent propose", chain_mandate: "Ton mandat", chain_payer: "Payeur sur PayPal", chain_seal: "Ton sceau", chain_receipt: "Reçu signé",
     mandate_kind: "Mandat de dépense", mandate_signed: "Signé par le titulaire · jamais par l'IA",
     scenes_hint: "Sept cas courts. Chacun prouve une chose, dans le bac à sable de PayPal.",
     status_real: "Bac à sable PayPal", status_real_v: "vraie API, argent fictif", status_sim: "Bac à sable simulé", status_sim_v: "pas d'identifiants PayPal",
     status_last: "Dernier reçu {t} UTC · n° {i}", status_none: "Aucun reçu pour l'instant", forensic: "Registre détaillé", receipts_n: "{n} scellés",
+    proof_heading: "Remonter jusqu'à la preuve", proof_hint: "Chaque résultat se vérifie. Ce sont des comptes du registre, pas un score de précision de l'IA.",
+    proof_all: "Toutes les issues", proof_moved: "Argent parti", proof_not_moved: "Aucun argent parti", proof_corrected: "Corrigées",
+    proof_total: "Issues enregistrées", proof_yes: "Argent parti", proof_no: "Aucun argent parti", proof_fixes: "Corrigées",
+    proof_search: "Chercher par reçu, bénéficiaire ou référence PayPal", proof_search_hint: "Chercher une preuve…",
+    proof_shown: "{n} issues affichées sur {total}",
+    proof_footnote: "Aucun argent parti ne signifie pas forcément que PayPal n'a pas été contacté : refus, attentes et encaissements incomplets restent distincts. Ouvre une ligne pour consulter son reçu et sa preuve fournisseur.",
     rail_propose: "Proposer", rail_challenge: "Contester", rail_verify: "Vérifier", rail_mandate: "Mandat", rail_gate: "Porte", rail_payer: "Payeur", rail_seal: "Sceau", rail_receipt: "Reçu",
     receipt_kind: "Reçu", tool_kind: "Appel d'outil", proof_empty: "Aucun reçu pour l'instant. Lance une décision : chaque issue, payée ou non, en laisse un ici.",
     ev_paypal: "PayPal", ev_approval: "Approbation", ev_moved: "Argent parti", seal_chain: "chaîne", seal_hash: "empreinte", seal_sig: "Ed25519", seal_key: "clé",
@@ -307,6 +325,10 @@ const lockMemo = {};
 const knownReceipts = new Set();
 let receiptsPrimed = false;
 let grid = null;
+let proofScope = "all";
+let proofQuery = "";
+let proofTotal = 0;
+let proofAutoOpened = false;
 let lastRun = null;
 let openId = null;
 const OWNER = "Studio Lumen";
@@ -320,8 +342,15 @@ function renderStatic() {
     ["t-scenes-title", "scenes_title"], ["t-scenes-hint", "scenes_hint"], ["reset", "reset"], ["t-waiting-title", "waiting_title"], ["pending-empty", "waiting_empty"],
     ["t-receipts-title", "receipts_title"], ["t-receipts-hint", "receipts_hint"], ["t-trust-title", "trust_title"], ["t-trust-hint", "trust_hint"],
     ["t-eyebrow", "eyebrow"], ["t-lede", "lede"], ["run-first", "cta_run"], ["run-poison", "cta_poison"], ["t-mandate-kind", "mandate_kind"],
-    ["t-mandate-signed", "mandate_signed"], ["t-forensic", "forensic"]]) $(`#${id}`).textContent = t(key);
+    ["t-mandate-signed", "mandate_signed"], ["t-forensic", "forensic"],
+    ["t-proof-heading", "proof_heading"], ["t-proof-hint", "proof_hint"],
+    ["t-proof-search", "proof_search"], ["t-proof-footnote", "proof_footnote"]]) $(`#${id}`).textContent = t(key);
   $("#t-question").replaceChildren(t("q1"), el("em", {}, t("q2")), t("q3"));
+  $("#proof-search").placeholder = t("proof_search_hint");
+  for (const b of document.querySelectorAll("#proof-scopes button")) {
+    b.textContent = t("proof_" + b.dataset.proofScope.replace("notMoved", "not_moved").replace("moved", "moved"));
+    b.setAttribute("aria-pressed", String(b.dataset.proofScope === proofScope));
+  }
   renderChain();
   for (const b of document.querySelectorAll("#lang button")) b.setAttribute("aria-pressed", String(b.dataset.lang === lang));
 }
@@ -468,6 +497,11 @@ function renderTheatre() {
         el("p", {}, refused ? t("refused_before", { x: explanationText(run.receipt) }) : receipt ? t("sealed_below", { i: sealOf(receipt.receipt_id)?.seal.index ?? "—" }) : t("passed")))),
     receipt?.corrections?.length ? el("div", { class: "seam-line", role: "note" }, `✦ ${t("seam")} — ${tx(receipt.corrections[0].replacement)}`) : "",
     receipt ? el("div", { class: "beat", style: "--t:3.7s" }, proofCard(receipt)) : "",
+    run.scene === 3 && refused ? el("aside", { class: "compare-next", role: "region", "aria-label": t("next_step") },
+      el("p", { class: "eyebrow" }, t("next_step")),
+      el("h3", {}, t("next_clean_title")),
+      el("p", { class: "muted" }, t("next_clean_text")),
+      el("button", { class: "primary", onclick: () => runScene(1) }, t("next_clean_cta"))) : "",
   );
   box.hidden = false;
 }
@@ -569,6 +603,8 @@ function renderProofs() {
   const all = [...state.receipts, ...(state.tool_receipts || [])].sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
   $("#proofs").replaceChildren(...(all.length ? all.slice(0, 3).map(proofCard) : [el("p", { class: "proof-empty" }, t("proof_empty"))]));
   $("#forensic-count").textContent = all.length ? `(${t("receipts_n", { n: all.length })})` : "";
+  // The grid is a useful witness only after a decision exists. Let the visitor close it again.
+  if (all.length && !proofAutoOpened) { $("#forensic").open = true; proofAutoOpened = true; }
 }
 
 const sealOf = (id) => sealed.find((e) => e.receipt_id === id) ?? null;
@@ -657,6 +693,31 @@ async function checkPayPal() {
   }
 }
 
+/** Counts use actual recorded receipt booleans, never AI confidence or inferred provider status. */
+function renderProofMetrics(entries) {
+  const stats = animaProofLens.counts(entries);
+  const widgets = [
+    ["proof_total", stats.total, "all"],
+    ["proof_yes", stats.moved, "moved"],
+    ["proof_no", stats.notMoved, "notMoved"],
+    ["proof_fixes", stats.corrected, "corrected"],
+  ];
+  $("#proof-overview").hidden = stats.total === 0;
+  $("#proof-metrics").replaceChildren(...widgets.map(([key, n, scope]) => (
+    el("button", { type: "button", class: "proof-metric", "aria-pressed": String(proofScope === scope),
+      onclick: () => setProofScope(scope) },
+      el("span", { class: "proof-metric-label" }, t(key)), el("strong", {}, String(n)))
+  )));
+  for (const b of document.querySelectorAll("#proof-scopes button")) b.setAttribute("aria-pressed", String(b.dataset.proofScope === proofScope));
+}
+function updateProofShown() {
+  $("#proof-shown").textContent = t("proof_shown", { n: grid?.getDisplayedRowCount() ?? 0, total: proofTotal });
+}
+function setProofScope(scope) {
+  if (!["all", "moved", "notMoved", "corrected"].includes(scope)) return;
+  proofScope = scope;
+  if (state) renderGrid(state.receipts, state.tool_receipts || []);
+}
 function columns() {
   return [
     { field: "time", headerName: t("col_time"), width: 100 },
@@ -681,26 +742,37 @@ function toolRow(r) {
 }
 
 function renderGrid(receipts, toolReceipts = []) {
-  const rows = [...toolReceipts.map(toolRow), ...receipts.map((r) => ({ at: r.created_at,
-    id: r.receipt_id, time: r.created_at.slice(11, 19), what: requestText(r), verdict: r.verdict, status: r.status,
-    // Strings, not booleans: AG Grid would otherwise draw checkboxes.
-    moved: r.money_moved ? t("yes") : t("no"), approval: r.boundary.approval,
-    paypal: r.evidence ? [r.evidence.capture_id || r.evidence.order_id, paypalStatus(r.evidence.capture_status || r.evidence.authorization_status || r.evidence.order_status)].filter(Boolean).join(" · ") : t("no_call"),
-    seams: r.corrections.length,
-  }))].sort((a, b) => (a.at < b.at ? 1 : -1));
+  const markers = animaProofLens.entries(receipts, toolReceipts);
+  const markerById = new Map(markers.map((x) => [x.id, x]));
+  const rows = [...toolReceipts.map((r) => ({ ...toolRow(r), proof: markerById.get(r.receipt_id) })),
+    ...receipts.map((r) => ({ at: r.created_at,
+      id: r.receipt_id, time: r.created_at.slice(11, 19), what: requestText(r), verdict: r.verdict, status: r.status,
+      // Strings, not booleans: AG Grid would otherwise draw checkboxes.
+      moved: r.money_moved ? t("yes") : t("no"), approval: r.boundary.approval,
+      paypal: r.evidence ? [r.evidence.capture_id || r.evidence.order_id, paypalStatus(r.evidence.capture_status || r.evidence.authorization_status || r.evidence.order_status)].filter(Boolean).join(" · ") : t("no_call"),
+      seams: r.corrections.length, proof: markerById.get(r.receipt_id),
+    }))].sort((a, b) => (a.at < b.at ? 1 : -1));
+  const shown = animaProofLens.select(rows, proofScope);
+  proofTotal = rows.length;
+  renderProofMetrics(markers);
   if (!grid) {
     const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     $("#grid").classList.add(dark ? "ag-theme-quartz-dark" : "ag-theme-quartz");
     grid = agGrid.createGrid($("#grid"), {
-      columnDefs: columns(), rowData: rows, getRowId: (p) => p.data.id, animateRows: true,
+      columnDefs: columns(), rowData: shown, getRowId: (p) => p.data.id, animateRows: true,
+      defaultColDef: { sortable: true, resizable: true, filter: true },
+      quickFilterText: proofQuery,
       overlayNoRowsTemplate: `<span>${t("no_rows")}</span>`,
+      onFilterChanged: updateProofShown,
       onRowClicked: (e) => openDrawer(e.data.id),
     });
   } else {
     grid.setGridOption("columnDefs", columns());
     grid.setGridOption("overlayNoRowsTemplate", `<span>${t("no_rows")}</span>`);
-    grid.setGridOption("rowData", rows);
+    grid.setGridOption("rowData", shown);
+    grid.setGridOption("quickFilterText", proofQuery);
   }
+  updateProofShown();
 }
 
 function openToolDrawer(r) {
@@ -774,8 +846,8 @@ function renderAll() {
   renderPending(state.pending, state.tool_pending || []);
   checkPayPal();
   renderTrust(state.trust);
-  renderGrid(state.receipts, state.tool_receipts || []);
   renderProofs();
+  renderGrid(state.receipts, state.tool_receipts || []);
   renderTheatre();
   // The theatre now tells the scene; the old summary card only carries errors.
   if (!lastRun) renderLastRun(); else if (!$("#last-run").dataset.error) $("#last-run").hidden = true;
@@ -808,9 +880,11 @@ async function act(fn, reopen) {
   if (busy) return;
   busy = true;
   document.body.classList.add("busy");
-  try { await fn(); } catch (e) { alertBox(e.message); return; }
+  // Stay locked until the updated state and sealed ledger have been fetched and painted.
+  // Unlocking earlier exposes stale pending actions and permits accidental repeat clicks.
+  try { await fn(); await refresh(reopen); }
+  catch (e) { alertBox(e.message); }
   finally { busy = false; document.body.classList.remove("busy"); }
-  await refresh(reopen);
 }
 
 function alertBox(message) {
@@ -842,7 +916,16 @@ function setLang(next) {
 }
 
 for (const b of document.querySelectorAll("#lang button")) b.addEventListener("click", () => setLang(b.dataset.lang));
-$("#reset").addEventListener("click", () => { lastRun = null; act(() => call("POST", "/api/reset")); });
+for (const b of document.querySelectorAll("#proof-scopes button")) b.addEventListener("click", () => setProofScope(b.dataset.proofScope));
+$("#proof-search").addEventListener("input", (e) => {
+  proofQuery = e.target.value;
+  if (grid) { grid.setGridOption("quickFilterText", proofQuery); updateProofShown(); }
+});
+$("#reset").addEventListener("click", () => {
+  lastRun = null; proofScope = "all"; proofQuery = ""; proofAutoOpened = false;
+  $("#proof-search").value = ""; $("#forensic").open = false;
+  act(() => call("POST", "/api/reset"));
+});
 $("#drawer-close").addEventListener("click", closeDrawer);
 $("#run-first").addEventListener("click", () => runScene(1));
 $("#run-poison").addEventListener("click", () => runScene(3));

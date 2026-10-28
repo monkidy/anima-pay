@@ -44,10 +44,10 @@ invoice text is treated as untrusted data; the answer is parsed strictly, and an
 missing or unreachable becomes WAIT. What the model *read* is compared with the invoice you
 recorded: a model fooled by injected text is stopped by the gate before PayPal is ever called.
 
-## The screen and the six scenes
+## The screen and the seven scenes
 
 `npm start` opens the desk on http://127.0.0.1:5274 (French or English, switch at the top right): the
-mandate, six scenes, what is waiting for you, the trust earned per payee, and every receipt in an AG
+mandate, seven scenes, what is waiting for you, the trust earned per payee, and every receipt in an AG
 Grid ledger. Click a receipt to see what was asked, what ran, the three voices, PayPal's evidence, and
 any correction sealed beside the original (the golden seam).
 
@@ -76,13 +76,13 @@ PayPal (DUPLICATE_INVOICE_ID) and sealed as such, even by a desk that lost its m
 Without sandbox credentials the desk runs on a local PayPal simulator, and without a model on
 scripted answers; both are shown on screen and written into every receipt.
 
-## Status (23 October 2026)
+## Status (25 October 2026; real sandbox evidence dated 23 October)
 
 Private build for the PayPal AI Hackathon 2026.
 
 | Part | State |
 |---|---|
-| Gate, three locks, sealed ledger, earned trust, council, tool firewall, hosted mode | 132 tests pass, including the hostile cases; deliberate sabotages of the protections are caught |
+| Gate, three locks, sealed ledger, earned trust, council, tool firewall, hosted mode | 155 Node tests pass on 28 Oct, including hostile cases; deliberate sabotages of the protections are caught; the premium demo also completed 17 desktop FR + 17 mobile FR + 3 mobile EN Chrome checks in simulated mode |
 | PayPal | real sandbox: full money path observed on 23/10 (authorize, then capture after a person's release: 29.00 EUR, capture COMPLETED, read back from PayPal), with PayPal's published test card standing in for the payer; declines carry PayPal's status; a release before the payer's approval is blocked. A person approving with a PayPal account: supported, not yet observed |
 | PayPal's agent tools | real sandbox MCP server (46 tools, all classed): a refund held, released, and refunded by PayPal (read back: capture REFUNDED); a fake dispute and a cancellation held and declined |
 | Model | real: claude-haiku-5-5 over the Anthropic API (`docs/evidence/`) |

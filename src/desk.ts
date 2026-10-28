@@ -156,11 +156,19 @@ export class PaymentDesk {
       invoice: p.invoice, proposal: p.proposal, history: [...this.imported(), ...this.ledger.pastPayments(this.invoices)], now: this.clock() });
     if (fresh.verdict === "fail") return this.mandateChanged(p, fresh);
     const newHolds = fresh.findings.filter((f) => f.impact === "hold" && !holds.includes(f.id)).map((f) => f.id);
-    if (newHolds.length && !(human && newHolds.every((h) => human.acknowledged.includes(h)))) {
+    // A signed trust grant may have been revoked AFTER review. The new threshold produces an
+    // informational HUMAN_RELEASE_REQUIRED finding, not a hold. Checking newHolds alone would
+    // let a previously autonomous payment capture without the now-required human release.
+    const freshHumanMissing = fresh.human_release_required && !human;
+    const unacknowledged = newHolds.filter((h) => !human?.acknowledged.includes(h));
+    if (freshHumanMissing || unacknowledged.length) {
       p.gate = { ...fresh, human_release_required: true };
       return this.record(p, "BLOCKED_ACTION_RECEIPT", "BLOCKED", "none", false, false, "payer_on_paypal", this.orderEvidence(order),
-        say("RELEASE_NOT_ACKNOWLEDGED", { missing: newHolds.join(", ") }, `Not paid yet. Since the review, new doubts appeared and were not acknowledged: ${newHolds.join(", ")}.`),
-        [{ id: "HUMAN_RELEASE_MISSING", impact: "hold", message: "Waiting for a person's release." }]);
+        freshHumanMissing
+          ? say("RELEASE_REQUIRED", {}, "Not paid yet. Permissions or trust changed since review; a person must release this payment before capture.")
+          : say("RELEASE_NOT_ACKNOWLEDGED", { missing: unacknowledged.join(", ") },
+              `Not paid yet. Since the review, new doubts appeared and were not acknowledged: ${unacknowledged.join(", ")}.`),
+        [{ id: "HUMAN_RELEASE_MISSING", impact: "hold", message: "Waiting for a person's release under the current permission state." }]);
     }
     if (!p.authorization_id) {
       let authorized: any;
