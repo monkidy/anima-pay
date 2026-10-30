@@ -1,0 +1,370 @@
+{
+ "1": [
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "PAY",
+   "amount": 2900,
+   "adv": "OBJECT",
+   "ver": "NO_OBJECTION",
+   "dissent": true
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "PAY",
+   "amount": 2900,
+   "adv": "NO_OBJECTION",
+   "ver": "NO_OBJECTION",
+   "dissent": false
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "PAY",
+   "amount": 2900,
+   "adv": "NO_OBJECTION",
+   "ver": "NO_OBJECTION",
+   "dissent": false
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "PAY",
+   "amount": 2900,
+   "adv": "OBJECT",
+   "ver": "NO_OBJECTION",
+   "dissent": true
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "PAY",
+   "amount": 2900,
+   "adv": "OBJECT",
+   "ver": "NO_OBJECTION",
+   "dissent": true
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "PAY",
+   "amount": 2900,
+   "adv": "NO_OBJECTION",
+   "ver": "NO_OBJECTION",
+   "dissent": false
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "PAY",
+   "amount": 2900,
+   "adv": "NO_OBJECTION",
+   "ver": "NO_OBJECTION",
+   "dissent": false
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "PAY",
+   "amount": 2900,
+   "adv": "OBJECT",
+   "ver": "NO_OBJECTION",
+   "dissent": true
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "PAY",
+   "amount": 2900,
+   "adv": "NO_OBJECTION",
+   "ver": "NO_OBJECTION",
+   "dissent": false
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "PAY",
+   "amount": 2900,
+   "adv": "OBJECT",
+   "ver": "NO_OBJECTION",
+   "dissent": true
+  }
+ ],
+ "2": [
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "PAY",
+   "amount": 4000,
+   "adv": "NO_OBJECTION",
+   "ver": "NO_OBJECTION",
+   "dissent": false
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "PAY",
+   "amount": 4000,
+   "adv": "OBJECT",
+   "ver": "NO_OBJECTION",
+   "dissent": true
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "PAY",
+   "amount": 4000,
+   "adv": "OBJECT",
+   "ver": "NO_OBJECTION",
+   "dissent": true
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "PAY",
+   "amount": 4000,
+   "adv": "OBJECT",
+   "ver": "NO_OBJECTION",
+   "dissent": true
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "PAY",
+   "amount": 4000,
+   "adv": "OBJECT",
+   "ver": "NO_OBJECTION",
+   "dissent": true
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "PAY",
+   "amount": 4000,
+   "adv": "OBJECT",
+   "ver": "NO_OBJECTION",
+   "dissent": true
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "PAY",
+   "amount": 4000,
+   "adv": "OBJECT",
+   "ver": "NO_OBJECTION",
+   "dissent": true
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "PAY",
+   "amount": 4000,
+   "adv": "NO_OBJECTION",
+   "ver": "NO_OBJECTION",
+   "dissent": false
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "PAY",
+   "amount": 4000,
+   "adv": "OBJECT",
+   "ver": "NO_OBJECTION",
+   "dissent": true
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "WAIT",
+   "amount": 4000,
+   "adv": "OBJECT",
+   "ver": "NO_OBJECTION",
+   "dissent": false
+  }
+ ],
+ "3": [
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "REFUSE",
+   "amount": 1200,
+   "adv": "OBJECT",
+   "ver": "NO_OBJECTION",
+   "dissent": false
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "REFUSE",
+   "amount": 1200,
+   "adv": "OBJECT",
+   "ver": "NO_OBJECTION",
+   "dissent": false
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "REFUSE",
+   "amount": 1200,
+   "adv": "OBJECT",
+   "ver": "NO_OBJECTION",
+   "dissent": false
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "REFUSE",
+   "amount": 1200,
+   "adv": "OBJECT",
+   "ver": "NO_OBJECTION",
+   "dissent": false
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "REFUSE",
+   "amount": 1200,
+   "adv": "OBJECT",
+   "ver": "NO_OBJECTION",
+   "dissent": false
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "REFUSE",
+   "amount": 1200,
+   "adv": "OBJECT",
+   "ver": "NO_OBJECTION",
+   "dissent": false
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "REFUSE",
+   "amount": 1200,
+   "adv": "OBJECT",
+   "ver": "NO_OBJECTION",
+   "dissent": false
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "REFUSE",
+   "amount": 1200,
+   "adv": "OBJECT",
+   "ver": "NO_OBJECTION",
+   "dissent": false
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "REFUSE",
+   "amount": 1200,
+   "adv": "OBJECT",
+   "ver": "NO_OBJECTION",
+   "dissent": false
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "REFUSE",
+   "amount": 1200,
+   "adv": "OBJECT",
+   "ver": "NO_OBJECTION",
+   "dissent": false
+  }
+ ],
+ "4": [
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "WAIT",
+   "amount": 1400,
+   "adv": "NO_OBJECTION",
+   "ver": "NO_OBJECTION",
+   "dissent": false
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "WAIT",
+   "amount": 1400,
+   "adv": "OBJECT",
+   "ver": "NO_OBJECTION",
+   "dissent": false
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "WAIT",
+   "amount": 1400,
+   "adv": "OBJECT",
+   "ver": "NO_OBJECTION",
+   "dissent": false
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "WAIT",
+   "amount": 1400,
+   "adv": "OBJECT",
+   "ver": "NO_OBJECTION",
+   "dissent": false
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "WAIT",
+   "amount": 1400,
+   "adv": "OBJECT",
+   "ver": "NO_OBJECTION",
+   "dissent": false
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "WAIT",
+   "amount": 1400,
+   "adv": "OBJECT",
+   "ver": "NO_OBJECTION",
+   "dissent": false
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "WAIT",
+   "amount": 1400,
+   "adv": "NO_OBJECTION",
+   "ver": "NO_OBJECTION",
+   "dissent": false
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "WAIT",
+   "amount": 1400,
+   "adv": "OBJECT",
+   "ver": "NO_OBJECTION",
+   "dissent": false
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "WAIT",
+   "amount": 1400,
+   "adv": "OBJECT",
+   "ver": "NO_OBJECTION",
+   "dissent": false
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "outcome": "awaiting_payer",
+   "rec": "WAIT",
+   "amount": 1400,
+   "adv": "OBJECT",
+   "ver": "NO_OBJECTION",
+   "dissent": false
+  }
+ ]
+}

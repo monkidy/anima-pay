@@ -329,10 +329,12 @@ test("the real server in hosted mode exits before listening on a public interfac
     // These two would start (a valid origin), so they must stop at the limit, before any port opens.
     [{ ANIMA_PUBLIC_ORIGIN: "https://anima.example", ANIMA_SCENE_BUDGET: "4O" }, /ANIMA_SCENE_BUDGET must be a whole number/],
     [{ ANIMA_PUBLIC_ORIGIN: "https://anima.example", ANIMA_MAX_SESSIONS: "0" }, /ANIMA_MAX_SESSIONS must be a whole number of at least 1/],
+    [{ ANIMA_PUBLIC_ORIGIN: "https://anima.example", ANIMA_CLIENT_SESSIONS: "0" }, /ANIMA_CLIENT_SESSIONS must be a whole number of at least 1/],
+    [{ ANIMA_PUBLIC_ORIGIN: "https://anima.example", ANIMA_VIDEO_URL: "http://video.example" }, /ANIMA_VIDEO_URL must be https/],
   ];
   for (const [extra, why] of cases) {
     const env: Record<string, string> = { ...process.env as Record<string, string>, HOST: "0.0.0.0", PORT: "5298", ANIMA_SIMULATE: "1", ANIMA_HOSTED: "1", ...extra };
-    for (const k of ["ANIMA_PUBLIC_ORIGIN", "RENDER_EXTERNAL_URL", "ANIMA_SCENE_BUDGET", "ANIMA_MAX_SESSIONS", "ANIMA_GLOBAL_SCENE_BUDGET"]) if (!(k in extra)) delete env[k];
+    for (const k of ["ANIMA_PUBLIC_ORIGIN", "RENDER_EXTERNAL_URL", "ANIMA_SCENE_BUDGET", "ANIMA_MAX_SESSIONS", "ANIMA_GLOBAL_SCENE_BUDGET", "ANIMA_CLIENT_SCENE_BUDGET", "ANIMA_CLIENT_SESSIONS", "ANIMA_VIDEO_URL", "RENDER"]) if (!(k in extra)) delete env[k];
     const r = spawnSync(process.execPath, [server], { env, encoding: "utf8", timeout: 20_000 });
     assert.equal(r.status, 1, `${JSON.stringify(extra)}: ${r.stdout}${r.stderr}`);
     assert.match(r.stderr, why, JSON.stringify(extra));
@@ -358,18 +360,26 @@ test("render.yaml points the health probe at a static file, not at the page", as
   assert.match(yaml, /^\s*healthCheckPath: \/style\.css\s*$/m);
 });
 
-test("render.yaml: hosted mode on, scripted advice, no auto-deploy, and the PayPal sandbox pair the only values typed by hand", async () => {
+test("render.yaml: hosted mode on, a live model behind the safety net, no auto-deploy, and only secrets typed by hand", async () => {
   const { readFileSync } = await import("node:fs");
   const yaml = readFileSync(fileURLToPath(new URL("../render.yaml", import.meta.url)), "utf8");
   const value = (key: string) => new RegExp(`- key: ${key}\\s*\\n\\s*value: "?([^"\\n]*)"?`).exec(yaml)?.[1];
   assert.equal(value("ANIMA_HOSTED"), "1");
-  assert.equal(value("ANIMA_HOSTED_MODEL"), "0");
+  // Decided 29/10: visitors run on a real model; the safety net falls back to the script, labelled.
+  assert.equal(value("ANIMA_HOSTED_MODEL"), "1");
+  assert.equal(value("ADVISOR_KIND"), "anthropic");
+  assert.equal(value("ADVISOR_MODEL"), "claude-haiku-5-5");
+  assert.equal(value("ANIMA_LIVE_MODEL_BUDGET"), "150");
+  // 30/10: per-client limits under a higher host-wide budget, so one script cannot empty the demo.
+  assert.equal(value("ANIMA_CLIENT_SCENE_BUDGET"), "100");
+  assert.equal(value("ANIMA_GLOBAL_SCENE_BUDGET"), "1500");
+  assert.equal(value("ANIMA_CLIENT_SESSIONS"), "6");
   assert.equal(value("HOST"), "0.0.0.0");
   assert.match(yaml, /^\s*autoDeploy: false\s*$/m);
   const byHand = [...yaml.matchAll(/- key: (\w+)\s*\n\s*sync: false/g)].map((m) => m[1]);
-  assert.deepEqual(byHand, ["PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET"]);
-  // No model credential and no simulator switch on the host.
-  assert.doesNotMatch(yaml, /ADVISOR_|ANTHROPIC|ANIMA_SIMULATE|PAYPAL_BASE_URL/);
+  assert.deepEqual(byHand, ["ADVISOR_API_KEY", "PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET"]);
+  // No key value, no other provider, and no simulator switch on the host.
+  assert.doesNotMatch(yaml, /sk-ant-|ANTHROPIC_API_KEY|ANIMA_SIMULATE|PAYPAL_BASE_URL/);
 });
 
 test("hosted: pages never open a session; only the page's explicit same-origin request does, once", async () => {
@@ -413,5 +423,84 @@ test("hosted: only a session idle past the limit may make room for a newcomer", 
     await visitor(base);
     assert.equal(surface.sessionCount(), 1);
     assert.equal((await first.post("/api/scenes/1")).status, 401);
+  } finally { await close(); }
+});
+
+test("hosted: one client cannot use up the demo by opening session after session, and is told where else to look", async () => {
+  // Every request of a test comes from 127.0.0.1; the client is named by a header here, as Cloudflare does on Render.
+  const { clientAddress } = await import("../src/http.ts");
+  const { base, close } = await serve({ hosted: true, makeApp: sim, sceneBudget: 40, globalSceneBudget: 10, clientSceneBudget: 3, clientOf: (req) => clientAddress(req) });
+  const as = (ip: string) => async () => {
+    const boot = await fetch(`${base}/api/session`, { method: "POST", headers: { ...json, Origin: base, "CF-Connecting-IP": ip }, body: "{}" });
+    const h = { ...json, Origin: base, "CF-Connecting-IP": ip, Cookie: boot.headers.get("set-cookie")!.split(";")[0] };
+    return { post: (p: string) => fetch(`${base}${p}`, { method: "POST", headers: h, body: "{}" }) };
+  };
+  try {
+    const script = as("203.0.113.7");
+    for (let i = 0; i < 3; i++) assert.equal((await (await script()).post("/api/scenes/1")).status, 200);
+    const refused = await (await script()).post("/api/scenes/1");
+    assert.equal(refused.status, 429);
+    assert.ok(Number(refused.headers.get("retry-after")) > 0);
+    const body = (await refused.json()) as any;
+    assert.match(body.error, /fair share/);
+    assert.match(body.error, /npm start/);
+    assert.ok(body.elsewhere.video && body.elsewhere.run_locally);
+    // Someone else still runs: the host-wide budget was not used up by the script.
+    assert.equal((await (await as("198.51.100.20")()).post("/api/scenes/1")).status, 200);
+    // An IPv6 client is one /48, not one address: rotating addresses inside it buys nothing.
+    for (let i = 1; i <= 3; i++) assert.equal((await (await as(`2001:db8:5::${i}`)()).post("/api/scenes/1")).status, 200);
+    assert.equal((await (await as("2001:db8:5:ffff::9")()).post("/api/scenes/1")).status, 429);
+  } finally { await close(); }
+});
+
+test("hosted: past the host-wide budget, the refusal says plainly what happened and where else to see ANIMA", async () => {
+  const { base, close } = await serve({ hosted: true, makeApp: sim, globalSceneBudget: 1, videoUrl: "https://video.example/anima" });
+  try {
+    assert.equal((await (await visitor(base)).post("/api/scenes/1")).status, 200);
+    const r = await (await visitor(base)).post("/api/scenes/1");
+    assert.equal(r.status, 429);
+    const body = (await r.json()) as any;
+    assert.match(body.error, /nothing is broken/);
+    assert.match(body.error, /https:\/\/video\.example\/anima/);
+    assert.equal(body.elsewhere.video, "https://video.example/anima");
+  } finally { await close(); }
+});
+
+test("hosted: a client at its session cap gives up its own idlest session, never another visitor's", async () => {
+  const { clientAddress } = await import("../src/http.ts");
+  const { base, surface, close } = await serve({ hosted: true, makeApp: sim, maxSessions: 3, clientSessions: 2, clientOf: (req) => clientAddress(req) });
+  const boot = (ip: string) => fetch(`${base}/api/session`, { method: "POST", headers: { ...json, Origin: base, "CF-Connecting-IP": ip }, body: "{}" });
+  try {
+    const judge = await visitor(base);
+    for (let i = 0; i < 20; i++) assert.equal((await boot("203.0.113.7")).status, 200);
+    assert.equal(surface.sessionCount(), 3);
+    assert.equal((await judge.post("/api/scenes/1")).status, 200);
+  } finally { await close(); }
+});
+
+test("the client behind Render is Cloudflare's address, else X-Forwarded-For's first entry (said), else the socket", async () => {
+  const { clientAddress, clientKey } = await import("../src/http.ts");
+  const req = (headers: Record<string, string>) => ({ headers, socket: { remoteAddress: "192.0.2.10" } }) as any;
+  const warned: string[] = [];
+  assert.equal(clientAddress(req({ "cf-connecting-ip": "203.0.113.7", "x-forwarded-for": "198.51.100.99" }), (m) => warned.push(m)), "203.0.113.7");
+  assert.deepEqual(warned, []);
+  assert.equal(clientAddress(req({ "x-forwarded-for": "198.51.100.1, 192.0.2.11" }), (m) => warned.push(m)), "198.51.100.1");
+  assert.equal(warned.length, 1);
+  assert.equal(clientAddress(req({})), "192.0.2.10");
+  assert.equal(clientKey("::ffff:192.0.2.1"), "192.0.2.1");
+  assert.equal(clientKey("2001:DB8:0005:1::1"), "2001:db8:5::/48");
+  assert.equal(clientKey("2001:db8::"), "2001:db8:0::/48");
+  assert.equal(clientKey("::1"), "0:0:0::/48");
+});
+
+test("a JSON body of null, a number or a string is refused plainly, without leaking an exception's text", async () => {
+  const { base, close } = await serve({ hosted: true, makeApp: sim });
+  try {
+    const a = await visitor(base);
+    for (const body of ["null", "1", "\"x\""]) {
+      const r = await fetch(`${base}/api/trust/grant`, { method: "POST", headers: { ...json, Origin: base, Cookie: a.cookie }, body });
+      assert.equal(r.status, 400, body);
+      assert.deepEqual(await r.json(), { error: "the body must be a JSON object" });
+    }
   } finally { await close(); }
 });

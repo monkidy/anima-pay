@@ -82,6 +82,15 @@ test("a declined call is refused; one PayPal refused was still sent; one PayPal 
   assert.deepEqual({ ...atPayPal.totals }, { sent: 2, held: 0, refused: 0, unclear: 1 });
 });
 
+// Observed 29/10 on the hosted demo: PayPal's tool server answered every call, reads included, with
+// PAYPAL_API_SETUP_ERROR, before sending anything to PayPal's payments API.
+test("a call PayPal's tool server never sent is not shown as PayPal's refusal, nor a failed read as read", () => {
+  const failedRead = { ...step("read", "read"), read: { ok: false, fields: [], error: "{\"ok\":false,\"code\":\"PAYPAL_API_SETUP_ERROR\"}" } };
+  const v = firewallView({ steps: [failedRead, step("refund", "held")] }, [receipt("refund", "TOOL_NOT_SENT_BY_PAYPAL_TOOLS", true)], []);
+  assert.deepEqual(Array.from(v.rows, (r: any) => r.kind), ["read_failed", "tools_failed"]);
+  assert.deepEqual({ ...v.totals }, { sent: 2, held: 0, refused: 0, unclear: 0 });
+});
+
 // Provenance (Asso's real-Chrome QA of 0ebd175, #3199/6375953115): facts read by the simulator must never be
 // credited to PayPal; only a real PayPal lookup is.
 test("facts from the simulator are never credited to PayPal; a real lookup is", () => {
@@ -92,6 +101,15 @@ test("facts from the simulator are never credited to PayPal; a real lookup is", 
   assert.equal(factsSource({ call: { id: "waiting" } }, sim), "simulated", "a waiting call on a simulated desk");
   assert.equal(factsSource({ call: { id: "waiting" } }, real), "paypal");
   assert.equal(factsSource(null, sim), "simulated");
+});
+
+test("once a hosted demo's scene 7 left PayPal's failing tools, nothing new is credited to PayPal; an earlier hold still is", () => {
+  const fellBack = { paypal: "paypal-sandbox", tools: "paypal-sandbox-mcp-simulator", tools_fallback: { tool: "get_order", code: "PAYPAL_API_SETUP_ERROR" } };
+  assert.equal(factsSource(null, fellBack), "simulated", "a read the simulated tools answered");
+  assert.equal(factsSource({ call: { id: "new" }, provider: "paypal-sandbox-mcp-simulator" }, fellBack), "simulated");
+  assert.equal(factsSource({ call: { id: "held-before" }, provider: "paypal-sandbox-mcp" }, fellBack), "paypal", "held on PayPal's tools before the switch");
+  assert.equal(factsSource({ call: { id: "read" }, kind: "read", provider: "paypal-sandbox-mcp" }, fellBack), "paypal", "a step PayPal's own tools answered, in a run that overlapped the switch");
+  assert.equal(factsSource(null, { paypal: "paypal-sandbox", tools: "paypal-sandbox-mcp" }), "paypal");
 });
 
 test("through the app's own state on a simulated desk: every tool receipt and waiting call reads as simulated", async () => {
@@ -116,7 +134,8 @@ test("through the app's own state on a simulated desk: every tool receipt and wa
 test("every source label has a simulated twin that says so, in English and in French", () => {
   const app = readFileSync(new URL("../web/app.js", import.meta.url), "utf8");
   const PROVENANCE = ["tool_read_from", "tool_read_ok", "tool_read_err", "tool_facts", "tool_result", "tool_ran", "fw_read", "fw_done",
-    "fw_paypal_refused", "fw_unknown", "fw_sum_read", "fw_col_paypal", "step_paypal_refused", "step_unknown"];
+    "fw_paypal_refused", "fw_unknown", "fw_sum_read", "fw_col_paypal", "step_paypal_refused", "step_unknown",
+    "fw_read_failed", "fw_tools_failed", "step_tools_failed", "step_done"];
   for (const key of PROVENANCE) {
     const plain = [...app.matchAll(new RegExp(`(?<![A-Za-z_])${key}: "([^"]*)"`, "g"))].map((m) => m[1]);
     const sim = [...app.matchAll(new RegExp(`(?<![A-Za-z_])${key}_sim: "([^"]*)"`, "g"))].map((m) => m[1]);
@@ -131,7 +150,7 @@ test("the screen never prints a source label without choosing its source first",
   // desk cannot fall back to PayPal's wording by a direct t(key).
   const app = readFileSync(new URL("../web/app.js", import.meta.url), "utf8");
   const PROVENANCE = ["tool_read_from", "tool_read_ok", "tool_read_err", "tool_facts", "tool_result", "tool_ran", "fw_read", "fw_done",
-    "fw_paypal_refused", "fw_unknown", "fw_sum_read", "fw_col_paypal"];
+    "fw_paypal_refused", "fw_unknown", "fw_sum_read", "fw_col_paypal", "fw_read_failed", "fw_tools_failed"];
   for (const key of PROVENANCE) assert.ok(!app.includes(`t("${key}"`), `${key} is printed without its source`);
   assert.ok(!app.includes("t(`step_${kind}`)"), "a step label is printed without its source");
   assert.ok(!app.includes("t(reached[kind])"), "a PayPal column label is printed without its source");

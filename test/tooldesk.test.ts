@@ -23,7 +23,7 @@ let n = 0;
 const call = (tool: string, args: Record<string, unknown> = {}): ToolCall => ({ id: `call-${++n}`, tool, args, reason: "test", agent: "test-agent", requested_at: NOW.toISOString() });
 const release = (acknowledged: string[] = []) => ({ by: "Studio Lumen", at: NOW.toISOString(), acknowledged });
 
-async function setup(mandate: ToolMandate = MANDATE) {
+async function setup(mandate: ToolMandate = MANDATE, provider: "paypal-sandbox-mcp" | "paypal-sandbox-mcp-simulator" = "paypal-sandbox-mcp-simulator") {
   const mcp = new McpSimulator();
   const rest = new SandboxSimulator();
   const paypal = new PayPalSandbox({ clientId: "id", clientSecret: "secret", transport: rest.transport, simulated: true });
@@ -32,7 +32,7 @@ async function setup(mandate: ToolMandate = MANDATE) {
   const capture = await paypal.captureAuthorization(order.purchase_units[0].payments.authorizations[0].id, "c1");
   const client = new McpSseClient({ token: async () => "t", fetcher: mcp.fetcher, timeoutMs: 2_000 });
   const ledger = new Ledger(null);
-  const desk = new ToolDesk({ tools: client, ledger, mandate: () => mandate, resolver: paypalFacts({ capture: (id) => paypal.getCapture(id) }), provider: "paypal-sandbox-mcp-simulator", clock: () => NOW });
+  const desk = new ToolDesk({ tools: client, ledger, mandate: () => mandate, resolver: paypalFacts({ capture: (id) => paypal.getCapture(id) }), provider, clock: () => NOW });
   return { mcp, client, ledger, desk, captureId: capture.id as string };
 }
 
@@ -154,4 +154,77 @@ test("a refund PayPal answers with {ok:false} is a failure, not money moved, eve
       assert.equal(out.receipt.result?.is_error, true);
     }
   } finally { client.close(); }
+});
+
+// Observed 29/10 on the hosted demo (scene 7, receipt #4), then the same evening for every tool, reads
+// included, while PayPal's REST API answered the same token: PayPal's tool server answered this.
+const SETUP_ERROR = { ok: false, code: "PAYPAL_API_SETUP_ERROR", message: "Unsupported cache mode: default" };
+
+test("a released refund PayPal's tool server never sent is sealed as a connection fault, never as PayPal's refusal", async () => {
+  const { desk, ledger, mcp, client, captureId } = await setup();
+  mcp.on("create_refund", () => SETUP_ERROR);
+  try {
+    const out = await desk.request(call("create_refund", { capture_id: captureId }));
+    if (out.kind !== "held") throw new Error("expected a hold");
+    const r = await desk.release(out.pending.call.id, release());
+    assert.equal(r.explanation_code, "TOOL_NOT_SENT_BY_PAYPAL_TOOLS");
+    assert.deepEqual(r.explanation_params, { tool: "create_refund", code: "PAYPAL_API_SETUP_ERROR", message: "Unsupported cache mode: default" });
+    assert.doesNotMatch(r.explanation, /PayPal refused/);
+    assert.ok(r.findings.some((f) => f.id === "PAYPAL_TOOLS_NOT_SENT") && !r.findings.some((f) => f.id === "PAYPAL_REFUSED"));
+    // The sealing rules do not move: the outcome is sealed in the chain, failed, and no money counts as moved.
+    assert.equal(r.receipt_type, "BLOCKED_ACTION_RECEIPT");
+    assert.equal(r.status, "FAILED");
+    assert.equal(r.money_moved, false);
+    assert.equal(r.result?.is_error, true);
+    assert.equal(mcp.count("create_refund"), 1);
+    assert.equal(ledger.toolReceipts().at(-1)?.receipt_id, r.receipt_id);
+    assert.equal(verifyChain(ledger.sealedEntries(), ledger.publicKeyPem).ok, true);
+  } finally { client.close(); }
+});
+
+test("PayPal's own refusal, with its HTTP status, still says PayPal refused", async () => {
+  const { desk, mcp, client, captureId } = await setup({ ...MANDATE, human_release_above_cents: 5_000 });
+  mcp.on("create_refund", () => ({ ok: false, status: 422, code: "PAYPAL_API_HTTP_ERROR", message: "The capture has already been fully refunded" }));
+  try {
+    const out = await desk.request(call("create_refund", { capture_id: captureId }));
+    if (out.kind !== "done") throw new Error("expected a run");
+    assert.equal(out.receipt.explanation_code, "TOOL_FAILED_AT_PAYPAL");
+    assert.match(out.receipt.explanation, /PayPal refused create_refund/);
+    assert.equal(out.receipt.money_moved, false);
+  } finally { client.close(); }
+});
+
+test("a call PayPal's tools sent without getting an answer is unknown, not failed: it may have run", async () => {
+  const { desk, mcp, client, captureId } = await setup({ ...MANDATE, human_release_above_cents: 5_000 });
+  mcp.on("create_refund", () => ({ ok: false, code: "PAYPAL_API_NO_RESPONSE", message: "timeout of 30000ms exceeded" }));
+  try {
+    const out = await desk.request(call("create_refund", { capture_id: captureId }));
+    if (out.kind !== "done") throw new Error("expected a run");
+    assert.equal(out.receipt.receipt_type, "PARTIAL_ACTION_RECEIPT");
+    assert.equal(out.receipt.status, "PARTIAL");
+    assert.equal(out.receipt.explanation_code, "TOOL_OUTCOME_UNKNOWN");
+    assert.ok(out.receipt.findings.some((f) => f.id === "OUTCOME_UNKNOWN"));
+    assert.equal(out.receipt.money_moved, false);
+  } finally { client.close(); }
+});
+
+test("what the simulated PayPal ran or refused is never credited to PayPal; what PayPal's own tools ran is", async () => {
+  const mandate = { ...MANDATE, human_release_above_cents: 5_000 };
+  const sim = await setup(mandate);
+  const failing = await setup(mandate);
+  const real = await setup(mandate, "paypal-sandbox-mcp");
+  try {
+    const ran = await sim.desk.request(call("create_refund", { capture_id: sim.captureId }));
+    if (ran.kind !== "done") throw new Error("expected a run");
+    assert.match(ran.receipt.explanation, /and the simulated PayPal ran it\.$/);
+    failing.mcp.on("create_refund", () => { throw new Error("no such capture"); });
+    const refused = await failing.desk.request(call("create_refund", { capture_id: failing.captureId }));
+    if (refused.kind !== "done") throw new Error("expected a run");
+    assert.equal(refused.receipt.explanation_code, "TOOL_FAILED_AT_PAYPAL");
+    assert.equal(refused.receipt.explanation, "Not done. The simulated PayPal refused create_refund.");
+    assert.deepEqual(refused.receipt.findings.find((f) => f.id === "PAYPAL_REFUSED")?.params, { source: "simulated" });
+    const live = await real.desk.request(call("create_refund", { capture_id: real.captureId }));
+    if (live.kind !== "done") throw new Error("expected a run");
+    assert.match(live.receipt.explanation, /, and PayPal ran it\.$/);
+  } finally { sim.client.close(); failing.client.close(); real.client.close(); }
 });

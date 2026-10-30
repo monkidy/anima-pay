@@ -50,6 +50,9 @@ const I18N = {
     mandate_kind: "Spend mandate", mandate_signed: "Signed by the account holder · never by the model",
     scenes_hint: "Seven short cases. Each proves one thing, on PayPal's sandbox.",
     status_real: "PayPal sandbox", status_real_v: "real API, test money", status_sim: "Simulated sandbox", status_sim_v: "no PayPal credentials",
+    status_tools_sim: "PayPal's tools: simulated", status_tools_sim_v: "PayPal's tool server failed at {time} UTC",
+    fw_fallback: "PayPal's tool server failed at {time} UTC, before sending {tool} to PayPal's payments API ({code}: {message}). Since then this scene goes on with the simulated PayPal tools: ANIMA's locks are the same, and each row says whose tools answered.",
+    sim_tag: "simulated", moved_sim: "simulated only", tool_not_sent_v: "no: PayPal's tool server failed before sending it",
     status_last: "Last receipt {t} UTC · #{i}", status_none: "No receipt yet", forensic: "Forensic ledger", receipts_n: "{n} sealed",
     proof_heading: "Follow the evidence", proof_hint: "Every result is inspectable. These are ledger counts, not an AI accuracy score.",
     proof_all: "All outcomes", proof_moved: "Money moved", proof_not_moved: "No money moved", proof_corrected: "Corrected",
@@ -63,16 +66,21 @@ const I18N = {
     sealed_below: "The receipt is sealed in the chain (#{i}), below.", stamp_sealed: "SEALED", stamp_refused: "REFUSED", ladder_0: "every payment waits", ladder_n: "alone ≤ {x}", open_receipt: "Open the receipt",
     approvalv: { payer_on_paypal: "payer on PayPal", payer_and_human_release: "payer + human release", sandbox_test_card: "PayPal test card", sandbox_test_card_and_human_release: "PayPal test card + human release", human_release: "human release", none: "none" },
     rtype: { ACTION_RECEIPT: "action receipt", REFUSAL_RECEIPT: "refusal receipt", BLOCKED_ACTION_RECEIPT: "blocked action receipt", PARTIAL_ACTION_RECEIPT: "partial receipt" },
-    status: { COMPLETED: "done", REFUSED: "refused", NOT_AUTHORIZED: "not authorized", BLOCKED: "blocked", PARTIAL: "not finished", DENIED: "denied by a rule", FAILED: "refused by PayPal" },
+    status: { COMPLETED: "done", REFUSED: "refused", NOT_AUTHORIZED: "not authorized", BLOCKED: "blocked", PARTIAL: "not finished", DENIED: "denied by a rule", FAILED: "failed" },
     tool_read_from_sim: "Read from the simulated PayPal: {x}", tool_read_ok_sim: "The simulated PayPal answered ({x}).", tool_read_err_sim: "The simulated PayPal answered with an error: {x}",
     tool_facts_sim: "Facts read from the simulated PayPal", tool_result_sim: "The simulated PayPal's answer", tool_ran_sim: "Ran at the simulated PayPal",
     fw_read_sim: "Read at the simulated PayPal", fw_done_sim: "Ran at the simulated PayPal", fw_paypal_refused_sim: "Sent; the simulated PayPal refused it", fw_unknown_sim: "Sent; the simulated PayPal did not answer",
     fw_sum_read_sim: "{n} reached the simulated PayPal", fw_col_paypal_sim: "PayPal (simulated)", step_paypal_refused_sim: "released, refused by the simulated PayPal", step_unknown_sim: "released, no answer from the simulated PayPal",
+    fw_read_failed_sim: "Sent; the simulated PayPal's tools answered with an error", fw_tools_failed_sim: "Sent; the simulated PayPal's tool server failed before its payments API", step_tools_failed_sim: "released, failed in the simulated PayPal's tool server", step_done_sim: "ran at the simulated PayPal",
     trust_reset: "autonomy reset", trust_alone: "the agent may pay alone, per payment", trust_record: "Its record", trust_no_record: "no payment yet",
     fw_read: "Read at PayPal", fw_done: "Ran at PayPal", fw_held: "Not sent: waits for a person", fw_never: "Never sent to PayPal", fw_error: "Error",
     fw_sum_read: "{n} reached PayPal", fw_sum_held: "{n} held", fw_sum_refused: "{n} refused", fw_sum_unclear: "{n} without a clear answer",
     fw_paypal_refused: "Sent; PayPal refused it", fw_unknown: "Sent; PayPal did not answer",
+    fw_read_failed: "Sent; PayPal's tools answered with an error", fw_tools_failed: "Sent; PayPal's tool server failed before PayPal's payments API",
+    step_read_failed: "passed (a read)", step_tools_failed: "released, failed in PayPal's tool server",
     step_paypal_refused: "released, refused by PayPal", step_unknown: "released, no answer from PayPal", fw_col_agent: "The agent asks", fw_col_anima: "ANIMA decides", fw_col_paypal: "PayPal",
+    // The badge names what ANIMA did, not how the run went: a refused payment is the gate working, never a "fail".
+    verdict: { pass: "pass", hold: "hold", fail: "refused" },
   },
   fr: {
     slogan: "Les agents peuvent dépenser. Qu'ils apportent les reçus.", catchphrase: "Pas de reçu, pas de paiement.",
@@ -120,6 +128,9 @@ const I18N = {
     mandate_kind: "Mandat de dépense", mandate_signed: "Signé par le titulaire · jamais par l'IA",
     scenes_hint: "Sept cas courts. Chacun prouve une chose, dans le bac à sable de PayPal.",
     status_real: "Bac à sable PayPal", status_real_v: "vraie API, argent fictif", status_sim: "Bac à sable simulé", status_sim_v: "pas d'identifiants PayPal",
+    status_tools_sim: "Outils PayPal : simulés", status_tools_sim_v: "le serveur d'outils de PayPal a échoué à {time} UTC",
+    fw_fallback: "Le serveur d'outils de PayPal a échoué à {time} UTC, avant d'envoyer {tool} à l'API de paiement de PayPal ({code} : {message}). Depuis, cette scène continue avec les outils PayPal simulés : les verrous d'ANIMA sont les mêmes, et chaque ligne dit quels outils ont répondu.",
+    sim_tag: "simulé", moved_sim: "simulé seulement", tool_not_sent_v: "non : le serveur d'outils de PayPal a échoué avant de l'envoyer",
     status_last: "Dernier reçu {t} UTC · n° {i}", status_none: "Aucun reçu pour l'instant", forensic: "Registre détaillé", receipts_n: "{n} scellés",
     proof_heading: "Remonter jusqu'à la preuve", proof_hint: "Chaque résultat se vérifie. Ce sont des comptes du registre, pas un score de précision de l'IA.",
     proof_all: "Toutes les issues", proof_moved: "Argent parti", proof_not_moved: "Aucun argent parti", proof_corrected: "Corrigées",
@@ -135,20 +146,25 @@ const I18N = {
     tool_facts_sim: "Faits lus chez le PayPal simulé", tool_result_sim: "Réponse du PayPal simulé", tool_ran_sim: "Exécuté chez le PayPal simulé",
     fw_read_sim: "Lu chez le PayPal simulé", fw_done_sim: "Exécuté chez le PayPal simulé", fw_paypal_refused_sim: "Envoyé ; le PayPal simulé l'a refusé", fw_unknown_sim: "Envoyé ; le PayPal simulé n'a pas répondu",
     fw_sum_read_sim: "{n} arrivé{s} chez le PayPal simulé", fw_col_paypal_sim: "PayPal (simulé)", step_paypal_refused_sim: "débloqué, refusé par le PayPal simulé", step_unknown_sim: "débloqué, sans réponse du PayPal simulé",
+    fw_read_failed_sim: "Envoyé ; les outils du PayPal simulé ont répondu par une erreur", fw_tools_failed_sim: "Envoyé ; le serveur d'outils du PayPal simulé a échoué avant son API de paiement", step_tools_failed_sim: "débloqué, échec dans le serveur d'outils du PayPal simulé", step_done_sim: "exécuté chez le PayPal simulé",
     trust_reset: "autonomie remise à zéro", trust_alone: "l'agent peut payer seul, par paiement", trust_record: "Son historique", trust_no_record: "aucun paiement pour l'instant",
     fw_read: "Lu chez PayPal", fw_done: "Exécuté chez PayPal", fw_held: "Pas envoyé : attend une personne", fw_never: "Jamais envoyé à PayPal", fw_error: "Erreur",
     fw_sum_read: "{n} arrivé{s} chez PayPal", fw_sum_held: "{n} retenu{s}", fw_sum_refused: "{n} refusé{s}", fw_sum_unclear: "{n} sans réponse claire",
     fw_paypal_refused: "Envoyé ; PayPal l'a refusé", fw_unknown: "Envoyé ; PayPal n'a pas répondu",
+    fw_read_failed: "Envoyé ; les outils de PayPal ont répondu par une erreur", fw_tools_failed: "Envoyé ; le serveur d'outils de PayPal a échoué avant l'API de paiement de PayPal",
+    step_read_failed: "passe (une lecture)", step_tools_failed: "débloqué, échec dans le serveur d'outils de PayPal",
     step_paypal_refused: "débloqué, refusé par PayPal", step_unknown: "débloqué, sans réponse de PayPal", fw_col_agent: "L'agent demande", fw_col_anima: "ANIMA décide", fw_col_paypal: "PayPal",
     anomaly: { CORRECTED: "correction (couture d'or)", DECLINED_BY_HUMAN: "refus par une personne", POSSIBLE_DUPLICATE: "doublon possible", PROPOSAL_DOES_NOT_MATCH_INVOICE: "proposition différente de la facture", MODEL_ADVISES_WAIT: "l'IA conseille d'attendre", MODEL_ADVISES_REFUSE: "l'IA conseille de refuser", INVOICE_ALREADY_PAID: "facture déjà payée" },
     verdict: { pass: "passe", hold: "retenu", fail: "refusé" },
     phrase: { pass: "La preuve ouvre la porte.", hold: "Pas encore. Apporte les reçus.", fail: "Les impressions ne passent pas." },
     rec: { PAY: "PAYER", WAIT: "ATTENDRE", REFUSE: "REFUSER" },
-    status: { COMPLETED: "fait", REFUSED: "refusé", NOT_AUTHORIZED: "non autorisé", BLOCKED: "bloqué", PARTIAL: "non terminé", DENIED: "refusé par une règle", FAILED: "refusé par PayPal" },
+    status: { COMPLETED: "fait", REFUSED: "refusé", NOT_AUTHORIZED: "non autorisé", BLOCKED: "bloqué", PARTIAL: "non terminé", DENIED: "refusé par une règle", FAILED: "échoué" },
     approvalv: { payer_on_paypal: "payeur sur PayPal", payer_and_human_release: "payeur + déblocage humain", sandbox_test_card: "carte de test PayPal", sandbox_test_card_and_human_release: "carte de test PayPal + déblocage humain", human_release: "déblocage humain", none: "aucune" },
     rtype: { ACTION_RECEIPT: "reçu d'action", REFUSAL_RECEIPT: "reçu de refus", BLOCKED_ACTION_RECEIPT: "reçu d'action bloquée", PARTIAL_ACTION_RECEIPT: "reçu partiel" },
     request: "payer {a} à {m} pour la facture {n}",
     scripted: "réponses écrites d'avance (aucun modèle branché)",
+    scripted_unavailable: "réponses écrites d'avance (modèle en direct indisponible : {w})",
+    scripted_budget: "réponses écrites d'avance (quota du jour du modèle en direct épuisé)",
     finding: {
       MANDATE_REVOKED: "Le mandat a été révoqué par son titulaire.",
       MANDATE_EXPIRED: "Le mandat a expiré le {date}.",
@@ -176,7 +192,8 @@ const I18N = {
       RECIPIENTS_UNKNOWN: "Les destinataires n'ont pas pu être lus chez PayPal ; une personne doit décider.",
       DESTRUCTIVE_ACTION: "{tool} supprime ou annule quelque chose ; une personne doit le débloquer.",
       REPEATED_CALL: "{tool} a déjà été exécuté sur le même objet ; une seconde fois demande une personne.",
-      PAYPAL_REFUSED: "PayPal a refusé l'appel.",
+      PAYPAL_REFUSED: "PayPal a refusé l'appel.", PAYPAL_REFUSED_SIM: "Le PayPal simulé a refusé l'appel.",
+      PAYPAL_TOOLS_NOT_SENT: "Le serveur d'outils de PayPal a échoué avant d'envoyer l'appel à l'API de paiement de PayPal.",
       OUTCOME_UNKNOWN: "PayPal n'a pas répondu ; on ne sait pas si l'appel a été exécuté.",
       ALREADY_RAN: "PayPal a déjà exécuté cet appel.",
       ALREADY_PAID_AT_PAYPAL: "PayPal a refusé un second paiement pour la facture {invoice}.",
@@ -200,7 +217,9 @@ const I18N = {
       TOOL_REFUSED: "Non exécuté. {fails} PayPal n'a pas été sollicité.",
       TOOL_DONE: "Fait. Le mandat autorisait {tool}, et PayPal l'a exécuté.",
       TOOL_DONE_BY: "Fait. Le mandat autorisait {tool}, {by} l'a débloqué, et PayPal l'a exécuté.",
-      TOOL_FAILED_AT_PAYPAL: "Pas fait. PayPal a refusé {tool}.",
+      TOOL_FAILED_AT_PAYPAL: "Pas fait. PayPal a refusé {tool}.", TOOL_FAILED_AT_PAYPAL_SIM: "Pas fait. Le PayPal simulé a refusé {tool}.",
+      TOOL_DONE_SIM: "Fait. Le mandat autorisait {tool}, et le PayPal simulé l'a exécuté.", TOOL_DONE_BY_SIM: "Fait. Le mandat autorisait {tool}, {by} l'a débloqué, et le PayPal simulé l'a exécuté.",
+      TOOL_NOT_SENT_BY_PAYPAL_TOOLS: "Pas fait. Le serveur d'outils de PayPal a échoué avant d'envoyer {tool} à l'API de paiement de PayPal ({code} : {message}). Une panne de la connexion aux outils de PayPal, pas un refus de PayPal.",
       TOOL_OUTCOME_UNKNOWN: "Issue inconnue. PayPal n'a pas répondu à {tool} ; vérifier chez PayPal avant de réessayer.",
       TOOL_DECLINED: "Non exécuté. {by} a refusé : {reason}. PayPal n'a pas été sollicité.",
       TOOL_RELEASE_NOT_ACKNOWLEDGED: "Pas encore exécuté. Le déblocage n'a pas confirmé la lecture de : {missing}.",
@@ -246,12 +265,18 @@ function tx(text) {
   for (const [en, f] of Object.entries(map)) if (out.includes(en)) { out = out.split(en).join(f); hit = true; }
   return hit ? out : text + I18N.fr.untranslated;
 }
-const verdictLabel = (v) => (fr() ? I18N.fr.verdict[v] : v);
+const verdictLabel = (v) => (fr() ? I18N.fr.verdict : I18N.en.verdict)[v] ?? v;
 const statusLabel = (s) => I18N[lang].status?.[s] ?? s;
 const approvalLabel = (a) => I18N[lang].approvalv?.[a] ?? a;
 const rtypeLabel = (r) => I18N[lang].rtype?.[r] ?? r;
 const recLabel = (r) => (fr() ? I18N.fr.rec[r] ?? r : r);
-const advisorLabel = (m) => (fr() && /scripted/.test(m) ? I18N.fr.scripted : m);
+/** A run the live model could not answer says why, in French too. */
+const advisorLabel = (m) => {
+  if (!fr() || !/scripted/.test(m)) return m;
+  const down = /live model unavailable: ([^)]*)/.exec(m);
+  if (down) return t("scripted_unavailable", { w: down[1] });
+  return /daily budget/.test(m) ? I18N.fr.scripted_budget : I18N.fr.scripted;
+};
 /** PayPal's own status word stays visible (it is the evidence); French adds its meaning beside it. */
 const PAYPAL_FR = { COMPLETED: "encaissé", CAPTURED: "encaissée", APPROVED: "approuvée par le payeur", CREATED: "créée, en attente du payeur", PAYER_ACTION_REQUIRED: "en attente du payeur", VOIDED: "annulée", PENDING: "en cours" };
 const paypalStatus = (s) => (s && fr() && PAYPAL_FR[s] ? `${s} (${PAYPAL_FR[s]})` : s);
@@ -261,7 +286,7 @@ const toolStatus = (s) => (s && fr() && TOOL_STATUS_FR[s] ? `${s} (${TOOL_STATUS
 
 function findingText(f) {
   if (!fr()) return f.message;
-  const tpl = I18N.fr.finding[f.id];
+  const tpl = (f.params?.source === "simulated" && I18N.fr.finding[`${f.id}_SIM`]) || I18N.fr.finding[f.id];
   if (!tpl) return f.message;
   const p = { ...(f.params || {}) };
   if (p.reasons) p.reasons = tx(String(p.reasons));
@@ -277,9 +302,11 @@ function explanationText(r) {
   }
   if (r.explanation_code === "PAID" && p.by) return fill(I18N.fr.explain.PAID_BY, p);
   if (r.explanation_code === "PAID_TEST_PAYER" && p.by) return fill(I18N.fr.explain.PAID_TEST_PAYER_BY, p);
-  if (r.explanation_code === "TOOL_DONE" && p.by) return fill(I18N.fr.explain.TOOL_DONE_BY, p);
+  // Only a call PayPal's own tools answered may say PayPal ran or refused it.
+  const sim = r.provider === "paypal-sandbox-mcp-simulator" ? "_SIM" : "";
+  if (r.explanation_code === "TOOL_DONE") return fill(I18N.fr.explain[`TOOL_DONE${p.by ? "_BY" : ""}${sim}`], p);
   if (r.explanation_code === "TOOL_REFUSED") return fill(I18N.fr.explain.TOOL_REFUSED, { fails: r.findings.filter((f) => f.impact === "fail").map(findingText).join(" ") });
-  const tpl = I18N.fr.explain[r.explanation_code];
+  const tpl = I18N.fr.explain[`${r.explanation_code}${sim}`] ?? I18N.fr.explain[r.explanation_code];
   return tpl ? fill(tpl, { ...p, reason: tx(String(p.reason ?? "")) }) : r.explanation;
 }
 
@@ -403,6 +430,7 @@ function renderModes(mode) {
   const last = [...sealed].reverse().find((e) => e.receipt_id && e.created_at) ?? null;
   $("#status").replaceChildren(
     el("span", { class: real ? "real" : "sim" }, el("i", { class: "dot", "aria-hidden": "true" }), el("strong", {}, real ? t("status_real") : t("status_sim")), " · ", real ? t("status_real_v") : t("status_sim_v")),
+    mode.tools_fallback ? el("span", { class: "sim" }, el("i", { class: "dot", "aria-hidden": "true" }), el("strong", {}, t("status_tools_sim")), " · ", t("status_tools_sim_v", { time: mode.tools_fallback.at.slice(11, 16) })) : "",
     el("span", {}, t("advisor", { m: advisorLabel(mode.advisor) })),
     el("span", {}, last ? t("status_last", { t: last.created_at.slice(11, 19), i: last.seal.index }) : t("status_none")),
   );
@@ -511,13 +539,13 @@ function renderTheatre() {
  *  outcome (web/firewall.js), so a call a person released counts where its row says it went. */
 function renderToolTheatre(box, run) {
   const scene = state.scenes.find((s) => s.n === 7);
-  const verdictOf = { read: "pass", done: "pass", held: "hold", refused: "fail", paypal_refused: "fail", unknown: "hold", error: "fail" };
-  const reached = { read: "fw_read", done: "fw_done", held: "fw_held", refused: "fw_never", paypal_refused: "fw_paypal_refused", unknown: "fw_unknown", error: "fw_error" };
-  const mark = { read: "✓", done: "✓", held: "‖", refused: "✕", paypal_refused: "✕", unknown: "?", error: "!" };
+  const verdictOf = { read: "pass", read_failed: "pass", done: "pass", held: "hold", refused: "fail", paypal_refused: "fail", tools_failed: "fail", unknown: "hold", error: "fail" };
+  const reached = { read: "fw_read", read_failed: "fw_read_failed", done: "fw_done", held: "fw_held", refused: "fw_never", paypal_refused: "fw_paypal_refused", tools_failed: "fw_tools_failed", unknown: "fw_unknown", error: "fw_error" };
+  const mark = { read: "✓", read_failed: "!", done: "✓", held: "‖", refused: "✕", paypal_refused: "✕", tools_failed: "!", unknown: "?", error: "!" };
   const view = animaFirewall.firewallView(run, state.tool_receipts || [], state.tool_pending || []);
   const deskSource = animaFirewall.factsSource(null, state.mode);
   const rows = view.rows.map(({ step: s, receipt, pending, kind }, i) => {
-    const source = animaFirewall.factsSource(receipt, state.mode);
+    const source = animaFirewall.factsSource(receipt ?? pending ?? s, state.mode);
     const resolved = receipt?.resolved ?? pending?.resolved;
     const findings = (receipt?.findings ?? pending?.findings ?? []).filter((f) => f.impact !== "info");
     return el("li", { class: `fw-row ${kind} beat`, style: `--t:${0.35 + i * 0.5}s` },
@@ -526,11 +554,11 @@ function renderToolTheatre(box, run) {
         el("p", { class: "muted" }, t("tool_reason", { r: tx(s.call.reason) })),
         resolved && Object.keys(resolved).length ? el("p", { class: "facts" }, factsLine(resolved, source)) : ""),
       el("div", { class: "fw-gate" },
-        el("div", {}, pill(receipt?.verdict ?? verdictOf[kind]), " ", el("span", { class: "step" }, ts(`step_${kind}`, ["paypal_refused", "unknown"].includes(kind) ? source : "paypal"))),
+        el("div", {}, pill(receipt?.verdict ?? verdictOf[kind]), " ", el("span", { class: "step" }, ts(`step_${kind}`, ["done", "paypal_refused", "tools_failed", "unknown"].includes(kind) ? source : "paypal"))),
         findings.length ? el("ul", {}, findings.map((f) => el("li", {}, findingText(f)))) : ""),
       el("div", { class: "fw-paypal" },
         el("span", { class: "reach", "aria-hidden": "true" }, mark[kind]),
-        el("div", {}, el("strong", {}, ts(reached[kind], ["read", "done", "paypal_refused", "unknown"].includes(kind) ? source : "paypal")),
+        el("div", {}, el("strong", {}, ts(reached[kind], ["read", "read_failed", "done", "paypal_refused", "tools_failed", "unknown"].includes(kind) ? source : "paypal")),
           s.read ? el("p", { class: "muted" }, s.read.ok ? ts("tool_read_ok", source, { x: s.read.fields.join(", ") || "—" }) : ts("tool_read_err", source, { x: s.read.error })) : "",
           receipt && kind !== "read" ? el("p", { class: "muted" }, explanationText(receipt)) : "",
           s.error ? el("p", { class: "muted" }, s.error) : "")));
@@ -544,6 +572,7 @@ function renderToolTheatre(box, run) {
         el("span", { class: "chip wait" }, t("fw_sum_held", { n: n.held, s: n.held > 1 ? "s" : "" })),
         el("span", { class: "chip stop" }, t("fw_sum_refused", { n: n.refused, s: n.refused > 1 ? "s" : "" })),
         n.unclear ? el("span", { class: "chip wait" }, t("fw_sum_unclear", { n: n.unclear })) : "")),
+    run.tools_fallback ? el("p", { class: "fw-fallback", role: "note" }, t("fw_fallback", { ...run.tools_fallback, time: run.tools_fallback.at.slice(11, 16) })) : "",
     el("p", { class: "fw-lede" }, t("tool_hint")),
     el("div", { class: "fw-head", "aria-hidden": "true" }, el("span", {}, t("fw_col_agent")), el("span", {}, t("fw_col_anima")), el("span", {}, ts("fw_col_paypal", deskSource))),
     el("ol", { class: "firewall" }, rows),
@@ -588,9 +617,9 @@ function proofCard(r) {
     el("div", {}, el("div", { class: "proof-amount" }, amount), el("div", { class: "proof-to" }, to)),
     el("p", { class: "proof-outcome" }, explanationText(r)),
     el("dl", { class: "proof-ev" },
-      el("dt", {}, t("ev_paypal")), el("dd", {}, paypal),
+      el("dt", {}, t("ev_paypal")), el("dd", {}, simulatedAmongReal(r) ? `${t("sim_tag")} · ${paypal}` : paypal),
       el("dt", {}, t("ev_approval")), el("dd", {}, approval),
-      el("dt", {}, t("ev_moved")), el("dd", {}, r.money_moved ? t("yes") : t("no"))),
+      el("dt", {}, t("ev_moved")), el("dd", {}, movedLabel(r))),
     el("div", { class: "proof-seal" }, stamp(r.verdict === "pass" ? "pass" : "fail"),
       el("div", { class: "seal-lines" },
         el("div", {}, el("b", {}, t("seal_chain")), ` #${s?.seal.index ?? "—"} · `, el("b", {}, t("seal_hash")), ` ${short(s?.seal.hash)}`),
@@ -721,7 +750,7 @@ function setProofScope(scope) {
 function columns() {
   return [
     { field: "time", headerName: t("col_time"), width: 100 },
-    { field: "verdict", headerName: t("col_verdict"), width: 120, cellRenderer: (p) => pill(p.value) },
+    { field: "verdict", headerName: t("col_verdict"), width: 140, cellRenderer: (p) => pill(p.value) },
     { field: "status", headerName: t("col_status"), width: 140, valueFormatter: (p) => statusLabel(p.value) },
     { field: "moved", headerName: t("col_moved"), width: 130 },
     { field: "what", headerName: t("col_req"), flex: 2, minWidth: 260 },
@@ -731,18 +760,28 @@ function columns() {
   ];
 }
 
+/** A tool receipt the simulated tools sealed on a desk otherwise on PayPal's real sandbox (the hosted safety net):
+ *  its answer is marked simulated, and it never counts as money moved at PayPal. */
+function simulatedAmongReal(r) {
+  return isTool(r) && r.provider === "paypal-sandbox-mcp-simulator" && state.mode.paypal === "paypal-sandbox";
+}
+
+function movedLabel(r) {
+  return !r.money_moved ? t("no") : simulatedAmongReal(r) ? t("moved_sim") : t("yes");
+}
+
 function toolRow(r) {
   const res = r.result;
   return {
     id: r.receipt_id, at: r.created_at, time: r.created_at.slice(11, 19), what: toolLine(r.call, r.resolved), verdict: r.verdict, status: r.status,
-    moved: r.money_moved ? t("yes") : t("no"), approval: r.release ? "human_release" : "none",
-    paypal: res ? [...Object.values(res.ids || {}), toolStatus(res.status || "")].filter(Boolean).join(" · ") || (res.is_error ? statusLabel("FAILED") : "") : t("no_call_tool"),
+    moved: movedLabel(r), approval: r.release ? "human_release" : "none",
+    paypal: res ? `${simulatedAmongReal(r) ? `${t("sim_tag")} · ` : ""}${[...Object.values(res.ids || {}), toolStatus(res.status || "")].filter(Boolean).join(" · ") || (res.is_error ? statusLabel("FAILED") : "")}` : t("no_call_tool"),
     seams: 0,
   };
 }
 
 function renderGrid(receipts, toolReceipts = []) {
-  const markers = animaProofLens.entries(receipts, toolReceipts);
+  const markers = animaProofLens.entries(receipts, toolReceipts.map((r) => (simulatedAmongReal(r) ? { ...r, money_moved: false } : r)));
   const markerById = new Map(markers.map((x) => [x.id, x]));
   const rows = [...toolReceipts.map((r) => ({ ...toolRow(r), proof: markerById.get(r.receipt_id) })),
     ...receipts.map((r) => ({ at: r.created_at,
@@ -790,7 +829,7 @@ function openToolDrawer(r) {
     el("h3", {}, t("explanation")),
     el("p", {}, explanationText(r)),
     el("h3", {}, t("asked_ran")),
-    dl([[ts("tool_ran", source), yn(r.executed)], [t("moved"), yn(r.money_moved)], [t("tool_released_by"), r.release ? `${r.release.by} · ${r.release.at.slice(0, 16).replace("T", " ")}` : "—"],
+    dl([[ts("tool_ran", source), r.explanation_code === "TOOL_NOT_SENT_BY_PAYPAL_TOOLS" ? t("tool_not_sent_v") : yn(r.executed)], [t("moved"), movedLabel(r)], [t("tool_released_by"), r.release ? `${r.release.by} · ${r.release.at.slice(0, 16).replace("T", " ")}` : "—"],
       [t("type"), rtypeLabel(r.receipt_type)], [t("mandate"), r.mandate_id]]),
     el("h3", {}, t("findings")),
     r.findings.length ? el("ul", {}, r.findings.map((f) => el("li", {}, findingText(f)))) : el("p", { class: "muted" }, t("none")),

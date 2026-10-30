@@ -37,8 +37,9 @@ export class McpSseClient implements ToolBackend {
 
   constructor(opts: { token: () => Promise<string>; baseUrl?: string; fetcher?: Fetcher; timeoutMs?: number }) {
     const base = opts.baseUrl ?? MCP_SANDBOX_BASE;
-    // Fail closed, like the REST client: never PayPal's live tools, whatever the configuration says.
-    if (new URL(base).hostname !== new URL(MCP_SANDBOX_BASE).hostname) throw new Error(`refusing non-sandbox MCP endpoint: ${base}`);
+    // Fail closed, like the REST client: never PayPal's live tools, whatever the configuration says, and
+    // never over plain http (the whole origin must be the sandbox's).
+    if (new URL(base).origin !== new URL(MCP_SANDBOX_BASE).origin) throw new Error(`refusing non-sandbox MCP endpoint: ${base}`);
     this.base = base;
     this.token = opts.token;
     this.fetcher = opts.fetcher ?? ((url, init) => fetch(url, init));
@@ -119,13 +120,19 @@ export class McpSseClient implements ToolBackend {
 
   private async send(endpoint: string, method: string, params: unknown): Promise<any> {
     const id = ++this.next;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const answer = new Promise<any>((resolve, reject) => {
-      const timer = setTimeout(() => { this.waiting.delete(id); reject(new Error(`PayPal MCP ${method}: no answer in ${this.timeoutMs} ms`)); }, this.timeoutMs);
+      timer = setTimeout(() => { this.waiting.delete(id); reject(new Error(`PayPal MCP ${method}: no answer in ${this.timeoutMs} ms`)); }, this.timeoutMs);
       this.waiting.set(id, (msg) => { clearTimeout(timer); this.waiting.delete(id); resolve(msg); });
     });
+    // The timer may fire while the POST is still on its way: that rejection is awaited below, never left
+    // unobserved (Node stops the whole server on an unobserved rejection).
+    answer.catch(() => {});
     try {
       await this.post(endpoint, { jsonrpc: "2.0", id, method, params });
     } catch (e) {
+      // No answer will come for a refused POST: its timer goes too.
+      clearTimeout(timer);
       this.waiting.delete(id);
       throw e;
     }

@@ -9,6 +9,8 @@ export interface Advice {
   read: { invoice_number: string; merchant: string; currency: string; amount_cents: number };
   recommendation: "PAY" | "WAIT" | "REFUSE";
   reasons: string[];
+  /** Set only when the model was never heard (an HTTP error or no network): this WAIT is not its answer. */
+  unavailable?: string;
 }
 
 export interface Advisor {
@@ -64,6 +66,9 @@ const FAIL_SAFE = (why: string): Advice => ({
   recommendation: "WAIT",
   reasons: [`The advisor's answer could not be used (${why}); a person must decide.`],
 });
+
+/** The same WAIT, marked as the provider's failure rather than the model's answer. */
+const UNAVAILABLE = (why: string): Advice => ({ ...FAIL_SAFE(why), unavailable: why });
 
 /** Strict parse of the model's text. Never throws: invalid input is a WAIT. */
 export function parseAdvice(text: string): Advice {
@@ -136,11 +141,11 @@ export class OpenAICompatibleAdvisor implements Advisor {
           { role: "user", content: userPrompt(invoiceText, context.recentPayments) },
         ] }),
       });
-      if (res.status !== 200) return FAIL_SAFE(`HTTP ${res.status}`);
+      if (res.status !== 200) return UNAVAILABLE(`HTTP ${res.status}`);
       const body = await res.json();
       return parseAdvice(String(body?.choices?.[0]?.message?.content ?? ""));
     } catch (e) {
-      return FAIL_SAFE(`unreachable: ${(e as Error).message}`);
+      return UNAVAILABLE(`unreachable: ${(e as Error).message}`);
     }
   }
 }
@@ -176,12 +181,12 @@ export class AnthropicAdvisor implements Advisor {
         body: JSON.stringify({ model: this.model, max_tokens: 1024, system: SYSTEM_PROMPT,
           messages: [{ role: "user", content: userPrompt(invoiceText, context.recentPayments) }] }),
       });
-      if (res.status !== 200) return FAIL_SAFE(`HTTP ${res.status}`);
+      if (res.status !== 200) return UNAVAILABLE(`HTTP ${res.status}`);
       const body = await res.json();
       const text = (body?.content ?? []).filter((b: any) => b?.type === "text").map((b: any) => b.text).join("");
       return parseAdvice(text);
     } catch (e) {
-      return FAIL_SAFE(`unreachable: ${(e as Error).message}`);
+      return UNAVAILABLE(`unreachable: ${(e as Error).message}`);
     }
   }
 }

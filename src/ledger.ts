@@ -8,7 +8,7 @@ import { createHash } from "node:crypto";
 import type { PastPayment } from "./model.ts";
 import type { Correction, PaymentReceipt, ToolReceipt } from "./receipt.ts";
 import { TOOL_CLASSES, type PastToolCall } from "./guard.ts";
-import { GENESIS, Signer, verifyChain, type Seal, type VerifyResult } from "./seal.ts";
+import { GENESIS, Signer, verifyChain, type LedgerHead, type Seal, type VerifyResult } from "./seal.ts";
 import type { TrustGrant } from "./trust.ts";
 
 /** The PayPal object a tool call acts on (a capture, a dispute, an order, an invoice, a subscription). */
@@ -130,6 +130,11 @@ export class Ledger {
 
   sealedEntries(): readonly Sealed[] {
     return this.chain;
+  }
+
+  /** The signed head as the ledger stands now: a verifier who keeps it will see any later cut. */
+  head(): LedgerHead {
+    return this.signer.head(this.chain.length, this.chain.length ? this.chain[this.chain.length - 1].seal.hash : GENESIS);
   }
 
   verify(): VerifyResult {

@@ -23,7 +23,7 @@ async function startHosted(hostedModel: string | undefined) {
   const port = 20_000 + Math.floor(Math.random() * 20_000);
   const env: Record<string, string> = { ...process.env as Record<string, string>, HOST: "127.0.0.1", PORT: String(port), ANIMA_HOSTED: "1", ANIMA_SIMULATE: "1",
     ADVISOR_KIND: "openai-compatible", ADVISOR_BASE_URL: "http://127.0.0.1:9", ADVISOR_MODEL: MODEL, ADVISOR_API_KEY: "" };
-  for (const k of ["PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET", "ANIMA_PUBLIC_ORIGIN", "RENDER_EXTERNAL_URL", "ANIMA_HOSTED_MODEL", "ANIMA_SCENE_BUDGET", "ANIMA_GLOBAL_SCENE_BUDGET", "ANIMA_MAX_SESSIONS"]) delete env[k];
+  for (const k of ["PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET", "ANIMA_PUBLIC_ORIGIN", "RENDER_EXTERNAL_URL", "ANIMA_HOSTED_MODEL", "ANIMA_SCENE_BUDGET", "ANIMA_GLOBAL_SCENE_BUDGET", "ANIMA_MAX_SESSIONS", "ANIMA_CLIENT_SCENE_BUDGET", "ANIMA_CLIENT_SESSIONS", "ANIMA_VIDEO_URL", "RENDER"]) delete env[k];
   if (hostedModel !== undefined) env.ANIMA_HOSTED_MODEL = hostedModel;
   const child = spawn(process.execPath, [join(dir, "src", "server.ts")], { env, stdio: ["ignore", "pipe", "pipe"] });
   let log = "";

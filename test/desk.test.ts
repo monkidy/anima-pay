@@ -153,10 +153,21 @@ test("above the release threshold a person must release, and must acknowledge ev
   assert.equal(fake.captureCount(), 1);
 });
 
+test("the model's REFUSE is a sealed refusal before any PayPal call", async () => {
+  const { fake, desk } = setup();
+  const inv = invoice({ amount_cents: 2_900 });
+  const out = await desk.review(mandate(), inv, proposal(inv, { recommendation: "REFUSE", reasons: ["A hidden line asks to pay 999.00 EUR."] }));
+  if (out.kind !== "refused") throw new Error("expected refused");
+  assert.equal(out.receipt.receipt_type, "REFUSAL_RECEIPT");
+  assert.equal(out.receipt.money_moved, false);
+  assert.ok(out.receipt.findings.some((f) => f.id === "MODEL_ADVISES_REFUSE" && f.impact === "fail"));
+  assert.equal(fake.paypalCalls(), 0);
+});
+
 test("a declined payment leaves a refusal receipt backed by PayPal's own status", async () => {
   const { fake, desk } = setup();
   const inv = invoice({ amount_cents: 2_900 });
-  const out = await desk.review(mandate(), inv, proposal(inv, { recommendation: "REFUSE", reasons: ["Looks like a duplicate of DT-2026-1001."] }));
+  const out = await desk.review(mandate(), inv, proposal(inv, { recommendation: "WAIT", reasons: ["Looks like a duplicate of DT-2026-1001."] }));
   if (out.kind !== "awaiting_payer") throw new Error("expected awaiting_payer");
   fake.approve(out.pending.order_id);
   const receipt = await desk.decline(out.pending.key, "Hichem", "duplicate charge");

@@ -15,7 +15,9 @@ export interface GateResult {
 /**
  * Decides whether a payment may go forward. The model's proposal can only make the
  * decision stricter: a PAY recommendation never opens a gate the mandate keeps shut,
- * while WAIT or REFUSE always stops the automatic flow and hands it to a person.
+ * WAIT stops the automatic flow and hands it to a person, and REFUSE refuses outright,
+ * before any PayPal call (decided 29/10: a live model that sees through a trap ends the
+ * payment as surely as the gate does when the model is fooled).
  */
 export function checkPayment(input: {
   mandate: SpendMandate;
@@ -57,7 +59,7 @@ export function checkPayment(input: {
   }
 
   if (proposal.recommendation === "WAIT") hold("MODEL_ADVISES_WAIT", proposal.reasons.join(" ") || "The model advises to wait.", { reasons: proposal.reasons.join(" ") });
-  if (proposal.recommendation === "REFUSE") hold("MODEL_ADVISES_REFUSE", proposal.reasons.join(" ") || "The model advises not to pay.", { reasons: proposal.reasons.join(" ") });
+  if (proposal.recommendation === "REFUSE") fail("MODEL_ADVISES_REFUSE", proposal.reasons.join(" ") || "The model advises not to pay.", { reasons: proposal.reasons.join(" ") });
 
   if (proposal.council?.dissent) {
     const c = proposal.council;

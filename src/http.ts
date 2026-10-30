@@ -17,11 +17,13 @@
 // page that rebinds its own name to 127.0.0.1 can neither write nor read.
 
 import { randomBytes } from "node:crypto";
+import { isIPv6 } from "node:net";
 import { readFile } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { extname, join } from "node:path";
 import type { AnimaApp } from "./app.ts";
 import { handleMcp } from "./mcp-server.ts";
+import { proveApi } from "./prove.ts";
 
 const TYPES: Record<string, string> = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml" };
 const MAX_BODY = 32 * 1024;
@@ -41,6 +43,14 @@ export interface HttpOptions {
   sceneBudget?: number;
   /** Hosted mode: runs allowed across ALL sessions in any 24 hours; new sessions cannot reset it. */
   globalSceneBudget?: number;
+  /** Hosted mode: who is asking, for the per-client limits below (see clientAddress); defaults to the socket's address. */
+  clientOf?: (req: IncomingMessage) => string;
+  /** Hosted mode: runs one client may make in any 24 hours across all its sessions (default: no per-client limit). */
+  clientSceneBudget?: number;
+  /** Hosted mode: sessions one client may hold; a client past it gives up its own idlest one (default: no limit). */
+  clientSessions?: number;
+  /** Hosted mode: the public demo video, named in the message a visitor gets when the demo can take no more runs. */
+  videoUrl?: string;
   sessionTtlMs?: number;
   /** A full demo may evict a session only after this long without activity (default 15 minutes). */
   idleEvictMs?: number;
@@ -123,14 +133,50 @@ export const CSP = [
 /** JSON is never a page: it may load nothing and be framed by nothing. */
 const API_HEADERS = { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'" };
 
-interface Session { id: string; app: AnimaApp; principal: string; mcpToken: string; scenes: number; seen: number }
+interface Session { id: string; app: AnimaApp; principal: string; mcpToken: string; scenes: number; seen: number; client: string }
 
 class HttpError extends Error {
   readonly status: number;
-  constructor(status: number, message: string) {
+  readonly extra: Record<string, unknown>;
+  readonly headers: Record<string, string>;
+  constructor(status: number, message: string, extra: Record<string, unknown> = {}, headers: Record<string, string> = {}) {
     super(message);
     this.status = status;
+    this.extra = extra;
+    this.headers = headers;
   }
+}
+
+/**
+ * One client for the per-client limits: an IPv4 address, or an IPv6 /48 (a single home, office or tunnel
+ * gets a whole /48 or more, so counting single IPv6 addresses would cost nothing to evade).
+ */
+export function clientKey(ip: string): string {
+  const a = ip.trim().replace(/^::ffff:(?=\d+\.\d+\.\d+\.\d+$)/i, "");
+  if (!isIPv6(a)) return a || "unknown";
+  const [head, tail] = a.split("::");
+  const groups = head ? head.split(":") : [];
+  if (tail !== undefined) groups.push(...Array(Math.max(0, 8 - groups.length - (tail ? tail.split(":").length : 0))).fill("0"));
+  return `${groups.slice(0, 3).map((g) => g.toLowerCase().replace(/^0+(?=.)/, "")).join(":")}::/48`;
+}
+
+/**
+ * Who is asking, behind Render. Render sits behind Cloudflare, which sets CF-Connecting-IP on every request
+ * it forwards, over anything the client sent; Render's own proxy only appends to X-Forwarded-For, whose
+ * first entry a client can therefore choose. So: Cloudflare's header, else that first entry (weaker, said
+ * through warn), else the socket. A spoofed address only lets someone dodge the per-client limits, never
+ * the host-wide budget, which stays the hard cap.
+ */
+export function clientAddress(req: IncomingMessage, warn: (msg: string) => void = () => {}): string {
+  const cf = req.headers["cf-connecting-ip"];
+  if (typeof cf === "string" && cf) return clientKey(cf);
+  const xff = req.headers["x-forwarded-for"];
+  const first = (Array.isArray(xff) ? xff[0] : xff)?.split(",")[0]?.trim();
+  if (first) {
+    warn("no CF-Connecting-IP on this request: the per-client limits fall back to X-Forwarded-For, which a client can set");
+    return clientKey(first);
+  }
+  return clientKey(req.socket.remoteAddress ?? "");
 }
 
 function send(res: ServerResponse, status: number, body: unknown, headers: Record<string, string> = {}): void {
@@ -139,6 +185,13 @@ function send(res: ServerResponse, status: number, body: unknown, headers: Recor
 }
 
 async function readBody(req: IncomingMessage): Promise<any> {
+  const body = await parseBody(req);
+  // JSON's null, a number or a string is valid JSON but no request: refused here, not by a property read.
+  if (body === null || typeof body !== "object") throw new HttpError(400, "the body must be a JSON object");
+  return body;
+}
+
+async function parseBody(req: IncomingMessage): Promise<any> {
   let size = 0;
   const chunks: Buffer[] = [];
   for await (const chunk of req) {
@@ -160,6 +213,19 @@ export function createAnimaHandler(o: HttpOptions) {
   const sceneBudget = o.sceneBudget ?? 40;
   const globalBudget = o.globalSceneBudget ?? 200;
   const runsLastDay: number[] = [];
+  const clientBudget = o.clientSceneBudget ?? Infinity;
+  const clientSessions = o.clientSessions ?? Infinity;
+  const clientRuns = new Map<string, number[]>();
+  const clientOf = o.clientOf ?? ((req: IncomingMessage) => clientKey(req.socket.remoteAddress ?? ""));
+  // Past a limit the demo says so plainly, and where else ANIMA can be seen: never a bare refusal.
+  const elsewhere = {
+    video: o.videoUrl ?? "the demo video on the project's Devpost page",
+    run_locally: "Node 24, then `npm start` in the project folder: no account and no key needed (see the README)",
+  };
+  const elsewhereText = `You can watch ${o.videoUrl ? `the demo video (${o.videoUrl})` : elsewhere.video}, or run ANIMA on your own computer in two minutes (${elsewhere.run_locally}).`;
+  const day = 86_400_000;
+  const prune = (runs: number[], now: number) => { while (runs.length && now - runs[0] > day) runs.shift(); };
+  const retryAfter = (runs: number[], now: number) => ({ "Retry-After": String(Math.max(1, Math.ceil((runs[0] + day - now) / 1000))) });
   const secureCookie = o.secureCookie ?? Boolean(o.publicOrigin?.startsWith("https://"));
   const ttl = o.sessionTtlMs ?? 2 * 3_600_000;
   const idleEvict = o.idleEvictMs ?? 15 * 60_000;
@@ -167,15 +233,24 @@ export function createAnimaHandler(o: HttpOptions) {
   const allowedOrigins = new Set(o.publicOrigin ? [o.publicOrigin] : [`http://127.0.0.1:${o.port}`, `http://localhost:${o.port}`, `http://[::1]:${o.port}`]);
   const loopbackHosts = new Set([`127.0.0.1:${o.port}`, `localhost:${o.port}`, `[::1]:${o.port}`]);
 
-  /** One run that may call a model or PayPal, for this session and for the whole host; refused past either budget. */
+  /** One run that may call a model or PayPal, for this session, its client and the whole host; refused past any budget. */
   function spend(s: Session, runs: number): void {
     if (runs <= 0) return;
-    if (s.scenes + runs > sceneBudget) throw new HttpError(429, `this demo session has used its ${sceneBudget} runs`);
-    // Host-wide: opening new sessions does not buy new runs.
+    if (s.scenes + runs > sceneBudget) throw new HttpError(429, `this demo session has used its ${sceneBudget} runs. ${elsewhereText}`, { elsewhere });
     const now = Date.now();
-    while (runsLastDay.length && now - runsLastDay[0] > 86_400_000) runsLastDay.shift();
-    if (runsLastDay.length + runs > globalBudget) throw new HttpError(429, `the demo has used its ${globalBudget} runs for the last 24 hours; try again later`);
-    for (let i = 0; i < runs; i++) runsLastDay.push(now);
+    // Per client: one script cannot use up the host-wide budget by opening session after session.
+    const mine = clientRuns.get(s.client) ?? [];
+    prune(mine, now);
+    if (mine.length + runs > clientBudget) {
+      throw new HttpError(429, `your connection has used its fair share of the live demo (${clientBudget} runs in 24 hours), so that no one visitor can use it up for everyone. ${elsewhereText}`, { elsewhere }, retryAfter(mine, now));
+    }
+    // Host-wide: opening new sessions does not buy new runs.
+    prune(runsLastDay, now);
+    if (runsLastDay.length + runs > globalBudget) {
+      throw new HttpError(429, `the live demo has used all its ${globalBudget} runs for the last 24 hours (they protect the PayPal sandbox and the model behind it); nothing is broken, try again later. ${elsewhereText}`, { elsewhere }, retryAfter(runsLastDay, now));
+    }
+    for (let i = 0; i < runs; i++) { runsLastDay.push(now); mine.push(now); }
+    clientRuns.set(s.client, mine);
     s.scenes += runs;
   }
 
@@ -187,15 +262,19 @@ export function createAnimaHandler(o: HttpOptions) {
 
   function sweep(now: number): void {
     for (const s of sessions.values()) if (now - s.seen > ttl) drop(s);
+    for (const [client, runs] of clientRuns) { prune(runs, now); if (!runs.length) clientRuns.delete(client); }
   }
 
-  function newSession(): Session {
+  function newSession(client: string): Session {
+    // A client at its cap gives up its own idlest session, never someone else's: a script cannot fill the demo.
+    const own = [...sessions.values()].filter((x) => x.client === client);
+    if (own.length >= clientSessions) drop(own.sort((a, b) => a.seen - b.seen)[0]);
     if (sessions.size >= maxSessions) {
       const idlest = [...sessions.values()].sort((a, b) => a.seen - b.seen)[0];
-      if (Date.now() - idlest.seen < idleEvict) throw new HttpError(503, "the demo is full right now; try again in a few minutes");
+      if (Date.now() - idlest.seen < idleEvict) throw new HttpError(503, `the live demo is full right now; try again in a few minutes. ${elsewhereText}`, { elsewhere }, { "Retry-After": "120" });
       drop(idlest);
     }
-    const s: Session = { id: token(), app: o.makeApp!(), principal: "", mcpToken: token(), scenes: 0, seen: Date.now() };
+    const s: Session = { id: token(), app: o.makeApp!(), principal: "", mcpToken: token(), scenes: 0, seen: Date.now(), client };
     s.principal = `demo visitor ${s.id.slice(0, 6)}`;
     sessions.set(s.id, s);
     byToken.set(s.mcpToken, s);
@@ -237,6 +316,8 @@ export function createAnimaHandler(o: HttpOptions) {
     if (method === "POST" && path === "/api/session") return [200, { principal: by, created: false }];
     if (method === "GET" && path === "/api/state") return [200, s ? { ...app.state(), session: { principal: s.principal, mcp_token: s.mcpToken, scenes_left: sceneBudget - s.scenes } } : app.state()];
     if (method === "GET" && path === "/api/ledger") return [200, app.sealedLedger()];
+    const proved = await proveApi(app, method, path, b, by);
+    if (proved) return proved;
     if (method !== "POST") {
       if (m = path.match(/^\/api\/pending\/([a-f0-9]{32})\/paypal$/)) return [200, await app.payerStatus(m[1])];
       return [404, { error: "not found" }];
@@ -262,7 +343,7 @@ export function createAnimaHandler(o: HttpOptions) {
     if (!originOk(req)) throw new HttpError(403, "this request comes from another site; refused");
     if (!(req.headers["content-type"] ?? "").startsWith("application/json")) throw new HttpError(415, "writes must be JSON");
     if (existing) return send(res, 200, { principal: existing.principal, created: false });
-    const s = newSession();
+    const s = newSession(clientOf(req));
     send(res, 200, { principal: s.principal, created: true }, { "Set-Cookie": cookieFor(s) });
   }
 
@@ -311,8 +392,14 @@ export function createAnimaHandler(o: HttpOptions) {
       res.writeHead(200, headers);
       res.end(content);
     } catch (e) {
-      const status = e instanceof HttpError ? e.status : 400;
-      send(res, status, { error: (e as Error).message });
+      if (e instanceof HttpError) return send(res, e.status, { error: e.message, ...e.extra }, e.headers);
+      // A desk's own refusals are plain Errors, worded for the person. A TypeError and its kin are a bug:
+      // logged with their stack here, never shown to a visitor.
+      if (e instanceof TypeError || e instanceof RangeError || e instanceof ReferenceError) {
+        console.error("ANIMA request failed:", e.stack);
+        return send(res, 500, { error: "the request could not be processed" });
+      }
+      send(res, 400, { error: (e as Error).message });
     }
   }
 

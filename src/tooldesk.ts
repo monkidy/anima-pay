@@ -53,7 +53,27 @@ export function paypalFailed(result: ToolResult | null | undefined): boolean {
   return parsed(result)?.ok === false;
 }
 
+/**
+ * Why PayPal's tool failed, in the codes of PayPal's own agent toolkit (handleAxiosError in its
+ * src/shared/functions.ts, @paypal/agent-toolkit 1.11.0): PAYPAL_API_SETUP_ERROR is raised before the
+ * request is sent to PayPal's payments API, PAYPAL_API_NO_RESPONSE after it was sent and nothing came
+ * back. Anything else is PayPal's answer, a refusal. Observed 29/10: every call, reads included, came
+ * back PAYPAL_API_SETUP_ERROR "Unsupported cache mode: default" while PayPal's REST API answered the
+ * same token; sealing that as "PayPal refused" was false.
+ */
+export function paypalFailure(result: ToolResult | null | undefined): "refused" | "not_sent" | "no_answer" | null {
+  if (!paypalFailed(result)) return null;
+  const code = parsed(result)?.code;
+  return code === "PAYPAL_API_SETUP_ERROR" ? "not_sent" : code === "PAYPAL_API_NO_RESPONSE" ? "no_answer" : "refused";
+}
+
 /** The JSON PayPal's tool answered with, or null when it answered with prose or a failure. */
+/** The code and message PayPal's tool answered with, when it failed. */
+export function paypalError(result: ToolResult | null | undefined): { code: string; message: string } | null {
+  const p = paypalFailed(result) ? parsed(result) : null;
+  return p && typeof p === "object" ? { code: String(p.code ?? ""), message: String(p.message ?? "") } : null;
+}
+
 export function jsonOf(result: ToolResult | null | undefined): any {
   return paypalFailed(result) ? null : parsed(result);
 }
@@ -178,24 +198,42 @@ export class ToolDesk {
         extra: [{ id: "ALREADY_RAN", impact: "fail", message: "PayPal already ran this call." }],
         explanation: say("TOOL_ALREADY_RAN", { receipt: already.receipt_id }, `Not run again. PayPal already ran this call (receipt ${already.receipt_id}).`) });
     }
+    // Only a call PayPal's own tools answered may say PayPal ran, refused or failed it.
+    const real = this.provider === "paypal-sandbox-mcp";
+    const paypal = real ? "PayPal" : "the simulated PayPal";
+    const PayPal = real ? "PayPal" : "The simulated PayPal";
     let result: ToolResult;
     try {
       result = await this.tools.callTool(p.call.tool, p.call.args);
     } catch (e) {
       // The request may have reached PayPal before the answer was lost: never claim it did not run.
       return this.seal({ ...p, type: "PARTIAL_ACTION_RECEIPT", status: "PARTIAL", release: human, result: null, executed: false,
-        extra: [{ id: "OUTCOME_UNKNOWN", impact: "hold", message: `PayPal did not answer: ${(e as Error).message}` }],
-        explanation: say("TOOL_OUTCOME_UNKNOWN", { tool: p.call.tool }, `Unknown. PayPal did not answer ${p.call.tool}; check PayPal before any retry.`) });
+        extra: [{ id: "OUTCOME_UNKNOWN", impact: "hold", message: `${PayPal} did not answer: ${(e as Error).message}` }],
+        explanation: say("TOOL_OUTCOME_UNKNOWN", { tool: p.call.tool }, `Unknown. ${PayPal} did not answer ${p.call.tool}; check ${paypal} before any retry.`) });
     }
-    const ok = !paypalFailed(result);
+    const failure = paypalFailure(result);
+    if (failure === "no_answer") {
+      // Sent by PayPal's tools, no answer from PayPal: it may have run, so it is unknown, like a lost answer.
+      return this.seal({ ...p, type: "PARTIAL_ACTION_RECEIPT", status: "PARTIAL", release: human, result, executed: true,
+        extra: [{ id: "OUTCOME_UNKNOWN", impact: "hold", message: `${PayPal}'s tools sent the call and ${paypal} did not answer: ${String(parsed(result)?.message ?? "").slice(0, 120)}` }],
+        explanation: say("TOOL_OUTCOME_UNKNOWN", { tool: p.call.tool }, `Unknown. ${PayPal} did not answer ${p.call.tool}; check ${paypal} before any retry.`) });
+    }
+    if (failure === "not_sent") {
+      const { code, message } = parsed(result);
+      const params = { tool: p.call.tool, code: String(code), message: String(message ?? "").slice(0, 120) };
+      return this.seal({ ...p, type: "BLOCKED_ACTION_RECEIPT", status: "FAILED", release: human, result, executed: true,
+        extra: [{ id: "PAYPAL_TOOLS_NOT_SENT", impact: "fail", message: `${PayPal}'s tool server failed before sending the call to ${paypal}'s payments API.` }],
+        explanation: say("TOOL_NOT_SENT_BY_PAYPAL_TOOLS", params, `Not done. ${PayPal}'s tool server failed before sending ${params.tool} to ${paypal}'s payments API (${params.code}: ${params.message}). A fault in the connection to ${paypal}'s tools, not a refusal by ${paypal}.`) });
+    }
+    const ok = failure === null;
     // A refund PayPal reports PENDING has not reached the customer yet: never counted as money moved.
     const pendingAtPayPal = ok && jsonOf(result)?.status === "PENDING";
     const moved = ok && !pendingAtPayPal && p.gate.klass === "money";
     return this.seal({ ...p, type: !ok ? "BLOCKED_ACTION_RECEIPT" : pendingAtPayPal ? "PARTIAL_ACTION_RECEIPT" : "ACTION_RECEIPT", status: !ok ? "FAILED" : pendingAtPayPal ? "PARTIAL" : "COMPLETED", release: human, result, executed: true, moved,
-      extra: ok ? [] : [{ id: "PAYPAL_REFUSED", impact: "fail", message: "PayPal refused the call." }],
+      extra: ok ? [] : [{ id: "PAYPAL_REFUSED", impact: "fail", message: `${real ? "PayPal" : "The simulated PayPal"} refused the call.`, ...(real ? {} : { params: { source: "simulated" } }) }],
       explanation: ok
-        ? say("TOOL_DONE", { tool: p.call.tool, ...(human ? { by: human.by } : {}) }, `Done. The mandate allowed ${p.call.tool}${human ? `, ${human.by} released it` : ""}, and PayPal ran it.`)
-        : say("TOOL_FAILED_AT_PAYPAL", { tool: p.call.tool }, `Not done. PayPal refused ${p.call.tool}.`) });
+        ? say("TOOL_DONE", { tool: p.call.tool, ...(human ? { by: human.by } : {}) }, `Done. The mandate allowed ${p.call.tool}${human ? `, ${human.by} released it` : ""}, and ${paypal} ran it.`)
+        : say("TOOL_FAILED_AT_PAYPAL", { tool: p.call.tool }, `Not done. ${real ? "PayPal" : "The simulated PayPal"} refused ${p.call.tool}.`) });
   }
 
   private seal(a: { call: ToolCall; gate: ToolGateResult; resolved: Resolved; type: ToolReceipt["receipt_type"]; status: ToolReceipt["status"];

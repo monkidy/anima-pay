@@ -22,15 +22,35 @@ services:
         value: "1"
       # The exact https origin is this service's own address, which Render sets (RENDER_EXTERNAL_URL).
       # Only for a custom domain, add ANIMA_PUBLIC_ORIGIN=https://that.domain by hand.
-      # The hosted demo answers with scripted advice: no model credential on this host.
+      # Visitors run on a real model (ANIMA_HOSTED_MODEL exactly "1"), behind a safety net: when the
+      # provider fails or the live model's daily budget is spent, a run is answered by the scene script
+      # and its label says so. The key lives in a provider workspace with its own monthly spend cap, set
+      # by hand in the dashboard; without it, every run falls back to the script, labelled.
       - key: ANIMA_HOSTED_MODEL
-        value: "0"
+        value: "1"
+      - key: ADVISOR_KIND
+        value: anthropic
+      - key: ADVISOR_MODEL
+        value: claude-haiku-5-5
+      - key: ADVISOR_API_KEY
+        sync: false
+      - key: ANIMA_LIVE_MODEL_BUDGET
+        value: "150"
+      # Runs (scenes and an agent's tool calls) per session, per client and host-wide in any 24 hours, and
+      # sessions host-wide and per client. A client is the address Cloudflare saw in front of Render (an
+      # IPv6 /48 counts as one): one script cannot use up the host-wide budget for every judge. Past a
+      # limit, a visitor is told so plainly and pointed to the video and to running ANIMA locally.
+      # Once the video is public, ANIMA_VIDEO_URL (https) may be added by hand to name it in that message.
       - key: ANIMA_SCENE_BUDGET
         value: "40"
+      - key: ANIMA_CLIENT_SCENE_BUDGET
+        value: "100"
       - key: ANIMA_GLOBAL_SCENE_BUDGET
-        value: "200"
+        value: "1500"
       - key: ANIMA_MAX_SESSIONS
-        value: "50"
+        value: "100"
+      - key: ANIMA_CLIENT_SESSIONS
+        value: "6"
       # A dedicated ANIMA sandbox app, set by hand in the dashboard; never a live PayPal credential
       # (the code refuses any non-sandbox endpoint anyway).
       - key: PAYPAL_CLIENT_ID

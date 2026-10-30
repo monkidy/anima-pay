@@ -5,14 +5,16 @@
 (function (root) {
   /** A receipt's explanation code says what became of a call once a person decided. */
   const FROM_CODE = {
-    TOOL_DONE: "done", TOOL_FAILED_AT_PAYPAL: "paypal_refused", TOOL_OUTCOME_UNKNOWN: "unknown",
+    TOOL_DONE: "done", TOOL_FAILED_AT_PAYPAL: "paypal_refused", TOOL_NOT_SENT_BY_PAYPAL_TOOLS: "tools_failed", TOOL_OUTCOME_UNKNOWN: "unknown",
     TOOL_DECLINED: "refused", TOOL_MANDATE_CHANGED: "refused", TOOL_REFUSED: "refused", TOOL_ALREADY_RAN: "refused",
   };
   /** Which total each final kind counts in: sent to PayPal, held for a person, refused before PayPal, or unclear. */
-  const BUCKET = { read: "sent", done: "sent", paypal_refused: "sent", held: "held", refused: "refused", unknown: "unclear", error: "unclear" };
+  const BUCKET = { read: "sent", read_failed: "sent", done: "sent", paypal_refused: "sent", tools_failed: "sent", held: "held", refused: "refused", unknown: "unclear", error: "unclear" };
 
   function effectiveKind(step, receipt) {
-    if (step.kind === "read" || step.kind === "error") return step.kind;
+    // A read PayPal's tools answered with an error was sent, but nothing was read: it is not shown as read.
+    if (step.kind === "read") return step.read && !step.read.ok ? "read_failed" : "read";
+    if (step.kind === "error") return step.kind;
     if (receipt) return FROM_CODE[receipt.explanation_code] ?? (receipt.executed ? "done" : step.kind);
     return step.kind;
   }
@@ -34,10 +36,12 @@
   }
 
   /** Where a call's facts and answers came from: PayPal's sandbox, or the simulator that stands in for it when
-   *  the desk has no PayPal credentials. A receipt names its provider; a call still waiting has none, so the
-   *  desk's mode decides. Only a real PayPal lookup may be called PayPal. */
+   *  the desk has no PayPal credentials, or when a hosted demo's PayPal tool server fails. A receipt, a held
+   *  call or a scene step names its provider; for anything else, the tools new calls go to decide. Only a real
+   *  PayPal lookup may be called PayPal. */
   function factsSource(record, mode) {
     if (record?.provider) return record.provider === "paypal-sandbox-mcp" ? "paypal" : "simulated";
+    if (mode?.tools) return mode.tools === "paypal-sandbox-mcp" ? "paypal" : "simulated";
     return mode?.paypal === "paypal-sandbox" ? "paypal" : "simulated";
   }
 

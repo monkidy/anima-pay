@@ -31,7 +31,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   const clientId = get("PAYPAL_CLIENT_ID");
   const clientSecret = get("PAYPAL_CLIENT_SECRET");
   const baseUrl = get("PAYPAL_BASE_URL") || SANDBOX_BASE;
-  if (new URL(baseUrl).hostname !== new URL(SANDBOX_BASE).hostname) {
+  if (new URL(baseUrl).origin !== new URL(SANDBOX_BASE).origin) {
     throw new Error(`PAYPAL_BASE_URL must be the sandbox (${SANDBOX_BASE}); got ${baseUrl}`);
   }
 

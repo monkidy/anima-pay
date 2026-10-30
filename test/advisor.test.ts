@@ -9,6 +9,7 @@ import { loadConfig, parseDotEnv, redact } from "../src/config.ts";
 import { PaymentDesk } from "../src/desk.ts";
 import { Ledger } from "../src/ledger.ts";
 import { PayPalSandbox } from "../src/paypal.ts";
+import { McpSseClient } from "../src/mcp.ts";
 import type { Invoice, SpendMandate } from "../src/model.ts";
 import { SandboxSimulator as FakePayPal } from "../src/sim/sandbox-sim.ts";
 
@@ -90,6 +91,13 @@ test("configuration: .env parsing, sandbox only, secrets never shown", () => {
   const shown = JSON.stringify(redact(c));
   assert.ok(!shown.includes("super-secret-value") && !shown.includes("AbCdEf123"));
   assert.throws(() => loadConfig({ PAYPAL_BASE_URL: "https://api-m.paypal.com" }, "missing.env"), /sandbox/);
+  // The sandbox's host is not enough: plain http, or another port, is refused too.
+  for (const url of ["http://api-m.sandbox.paypal.com", "https://api-m.sandbox.paypal.com:8443"]) {
+    assert.throws(() => loadConfig({ PAYPAL_BASE_URL: url }, "missing.env"), /sandbox/, url);
+    assert.throws(() => new PayPalSandbox({ clientId: "x", clientSecret: "y", baseUrl: url }), /non-sandbox/, url);
+  }
+  assert.throws(() => new McpSseClient({ token: async () => "t", baseUrl: "http://mcp.sandbox.paypal.com" }), /non-sandbox/);
+  assert.equal(loadConfig({ PAYPAL_BASE_URL: "https://api-m.sandbox.paypal.com" }, "missing.env").paypal, null);
   assert.equal(loadConfig({}, "missing.env").paypal, null);
 });
 

@@ -81,8 +81,9 @@ export class PayPalSandbox {
 
   constructor(config: PayPalConfig) {
     const baseUrl = config.baseUrl ?? SANDBOX_BASE;
-    // Fail closed: this project never talks to live PayPal, whatever the configuration says.
-    if (new URL(baseUrl).hostname !== new URL(SANDBOX_BASE).hostname) {
+    // Fail closed: this project never talks to live PayPal, whatever the configuration says, and never
+    // over plain http: the whole origin (scheme, host, port) must be the sandbox's.
+    if (new URL(baseUrl).origin !== new URL(SANDBOX_BASE).origin) {
       throw new Error(`refusing non-sandbox PayPal endpoint: ${baseUrl}`);
     }
     this.baseUrl = baseUrl;
