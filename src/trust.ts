@@ -27,6 +27,8 @@ export interface MerchantTrust {
   merchant: string;
   ceiling_cents: number;
   granted_cents: number;
+  /** The document forms of the payments behind the grant in force: all it covers. Empty without a grant, or on receipts that carry none. */
+  earned_forms: string[];
   streak: number;
   last_anomaly: { at: string; receipt_id: string; reason: string } | null;
   proposal: { to_cents: number; basis: string[] } | null;
@@ -54,10 +56,13 @@ export function merchantTrust(
   let last_anomaly: MerchantTrust["last_anomaly"] = null;
   const curve: MerchantTrust["curve"] = [];
   const seenReceiptIds = new Set<string>();
+  const formOfPaid = new Map<string, string>();
+  let earned: string[] = [];
 
   function reset(at: string, id: string, reason: string): void {
     if (granted > 0) curve.push({ at, cents: 0, why: "reset" });
     granted = 0;
+    earned = [];
     streak = [];
     last_anomaly = { at, receipt_id: id, reason };
   }
@@ -68,6 +73,7 @@ export function merchantTrust(
     if (entry.schema === "anima.payment_receipt.v0") {
       if (entry.request.merchant !== merchant) continue;
       seenReceiptIds.add(entry.receipt_id);
+      if (entry.money_moved && entry.document_form) formOfPaid.set(entry.receipt_id, entry.document_form);
       const bad = entry.findings.find(f => ANOMALIES.has(f.id));
       if (bad) reset(entry.created_at, entry.receipt_id, bad.id);
       else if (entry.money_moved) streak.push(entry.receipt_id);
@@ -75,6 +81,7 @@ export function merchantTrust(
       if (seenReceiptIds.has(entry.receipt_id)) reset(entry.at, entry.receipt_id, "CORRECTED");
     } else if (entry.schema === "anima.trust_grant.v0" && entry.merchant === merchant) {
       granted = Math.min(entry.auto_release_cents, ceilingCents);
+      earned = [...new Set(entry.basis.flatMap((id) => formOfPaid.get(id) ?? []))];
       streak = [];
       curve.push({ at: entry.at, cents: granted, why: "grant" });
     }
@@ -82,6 +89,6 @@ export function merchantTrust(
   const next = steps(ceilingCents).find(c => c > granted);
   const proposal = next !== undefined && streak.length >= STREAK_FOR_STEP
     ? { to_cents: next, basis: [...streak] } : null;
-  return { merchant, ceiling_cents: ceilingCents, granted_cents: granted,
+  return { merchant, ceiling_cents: ceilingCents, granted_cents: granted, earned_forms: earned,
     streak: streak.length, last_anomaly, proposal, curve };
 }

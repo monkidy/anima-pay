@@ -3,6 +3,7 @@
 // gate asks for it, a person's release in the app. Every outcome, paid or not, leaves a receipt.
 
 import { randomUUID } from "node:crypto";
+import { documentForm } from "./form.ts";
 import { checkPayment, type GateResult } from "./gate.ts";
 import { Ledger, idempotencyKey } from "./ledger.ts";
 import type { Invoice, PastPayment, Proposal, SpendMandate } from "./model.ts";
@@ -38,6 +39,8 @@ export interface PendingPayment {
   stand_in?: "sandbox_test_card";
   /** Set once PayPal accepted a capture; a PENDING one is settled later, never counted as paid before. */
   capture_id?: string | null;
+  /** The form of the document the model read, or null when the desk was given none. */
+  document_form: string | null;
 }
 
 export interface HumanRelease {
@@ -61,24 +64,28 @@ export class PaymentDesk {
   private readonly clock: () => Date;
   private readonly imported: () => PastPayment[];
   private readonly releaseThreshold: (mandate: SpendMandate, merchant: string) => number;
+  private readonly earnedForms: ((merchant: string) => readonly string[]) | undefined;
   private readonly returnUrl: string | undefined;
   private readonly mandateNow: (m: SpendMandate) => SpendMandate;
   private readonly paypalScope: string | undefined;
 
   /** imported: payments made before this desk existed (a bank or PayPal statement), for duplicates and budgets. */
   /** releaseThreshold: above what amount a person must release, per merchant (earned trust); defaults to the mandate. */
+  /** earnedForms: the document forms a person's grant rests on, per merchant; a payment only that grant would let through must be of one of them. */
   /** returnUrl: where PayPal sends the payer back after approving or cancelling. */
   /** mandateNow: the mandate as it stands at release time (revoked, expired, changed); defaults to the reviewed one. */
   /** paypalScope: for desks that share one PayPal account (a hosted demo, one desk per visitor), a tag that
    * makes this desk's request ids and PayPal invoice ids its own; PayPal then refuses a second payment of
    * an invoice within this desk only, and never replays another desk's answer. Without it, PayPal's memory
    * of an invoice is the account's, which is what a single real desk wants. */
-  constructor(deps: { paypal: PayPalSandbox; ledger: Ledger; clock?: () => Date; imported?: () => PastPayment[]; releaseThreshold?: (mandate: SpendMandate, merchant: string) => number; returnUrl?: string; mandateNow?: (m: SpendMandate) => SpendMandate; paypalScope?: string }) {
+  constructor(deps: { paypal: PayPalSandbox; ledger: Ledger; clock?: () => Date; imported?: () => PastPayment[]; releaseThreshold?: (mandate: SpendMandate, merchant: string) => number; earnedForms?: (merchant: string) => readonly string[]; returnUrl?: string; mandateNow?: (m: SpendMandate) => SpendMandate; paypalScope?: string }) {
     this.paypal = deps.paypal;
     this.ledger = deps.ledger;
     this.clock = deps.clock ?? (() => new Date());
     this.imported = deps.imported ?? (() => []);
     this.releaseThreshold = deps.releaseThreshold ?? ((m) => m.human_release_above_cents);
+    // A desk given grants but not the forms behind them cannot say a document is covered: none is.
+    this.earnedForms = deps.earnedForms ?? (deps.releaseThreshold ? () => [] : undefined);
     this.returnUrl = deps.returnUrl;
     this.mandateNow = deps.mandateNow ?? ((m) => m);
     this.paypalScope = deps.paypalScope;
@@ -89,15 +96,22 @@ export class PaymentDesk {
     return this.paypalScope ? `${invoice.number}-${this.paypalScope}` : invoice.number;
   }
 
-  async review(mandate: SpendMandate, invoice: Invoice, proposal: Proposal): Promise<ReviewOutcome> {
+  /** What the gate compares, when this desk has grants to answer for. */
+  private documentCheck(merchant: string, form: string | null) {
+    return this.earnedForms ? { form, earned: this.earnedForms(merchant) } : undefined;
+  }
+
+  /** documentText: exactly what the model was given to read; its form is sealed in every receipt of this payment. */
+  async review(mandate: SpendMandate, invoice: Invoice, proposal: Proposal, documentText?: string): Promise<ReviewOutcome> {
     this.invoices.set(invoice.id, invoice);
+    const form = documentText === undefined ? null : documentForm(documentText, invoice);
     const key = idempotencyKey([...(this.paypalScope ? [this.paypalScope] : []), mandate.id, invoice.id, invoice.merchant, invoice.currency, invoice.amount_cents]);
     const history = [...this.imported(), ...this.ledger.pastPayments(this.invoices)];
     const threshold = Math.min(mandate.human_release_above_cents, this.releaseThreshold(mandate, invoice.merchant));
-    const gate = checkPayment({ mandate: { ...mandate, human_release_above_cents: threshold }, invoice, proposal, history, now: this.clock() });
+    const gate = checkPayment({ mandate: { ...mandate, human_release_above_cents: threshold }, invoice, proposal, history, now: this.clock(), document: this.documentCheck(invoice.merchant, form) });
     if (gate.verdict === "fail") {
       const receipt = this.receipt({
-        type: "REFUSAL_RECEIPT", status: "NOT_AUTHORIZED", key, mandate, invoice, proposal, gate,
+        type: "REFUSAL_RECEIPT", status: "NOT_AUTHORIZED", key, mandate, invoice, proposal, gate, form,
         actual: "none", started: false, moved: false, approval: "none", evidence: null,
         explanation: say("REFUSED_BY_GATE", {}, `Not paid. ${gate.findings.filter((f) => f.impact === "fail").map((f) => f.message).join(" ")} No PayPal call was made.`),
       });
@@ -110,7 +124,7 @@ export class PaymentDesk {
       returnUrl: this.returnUrl && `${this.returnUrl}?paypal=return`, cancelUrl: this.returnUrl && `${this.returnUrl}?paypal=cancel`,
     });
     const approve = (order.links ?? []).find((l: any) => l.rel === "approve" || l.rel === "payer-action");
-    const pending: PendingPayment = { key, mandate, invoice, proposal, gate, order_id: order.id, approve_url: approve?.href ?? null, authorization_id: null };
+    const pending: PendingPayment = { key, mandate, invoice, proposal, gate, order_id: order.id, approve_url: approve?.href ?? null, authorization_id: null, document_form: form };
     this.pending.set(key, pending);
     return { kind: "awaiting_payer", pending };
   }
@@ -153,7 +167,7 @@ export class PaymentDesk {
     // The decision was taken at review; the money moves now. Ask the mandate again, as it stands now:
     // expired, revoked, a budget spent in between, a new duplicate. Fails refuse; new holds need a person.
     const fresh = checkPayment({ mandate: { ...this.mandateNow(p.mandate), human_release_above_cents: Math.min(p.mandate.human_release_above_cents, this.releaseThreshold(p.mandate, p.invoice.merchant)) },
-      invoice: p.invoice, proposal: p.proposal, history: [...this.imported(), ...this.ledger.pastPayments(this.invoices)], now: this.clock() });
+      invoice: p.invoice, proposal: p.proposal, history: [...this.imported(), ...this.ledger.pastPayments(this.invoices)], now: this.clock(), document: this.documentCheck(p.invoice.merchant, p.document_form) });
     if (fresh.verdict === "fail") return this.mandateChanged(p, fresh);
     const newHolds = fresh.findings.filter((f) => f.impact === "hold" && !holds.includes(f.id)).map((f) => f.id);
     // A signed trust grant may have been revoked AFTER review. The new threshold produces an
@@ -321,12 +335,12 @@ export class PaymentDesk {
 
   private record(p: PendingPayment, type: ReceiptType, status: ReceiptStatus, actual: string, started: boolean, moved: boolean,
     approval: PaymentReceipt["boundary"]["approval"], evidence: ProviderEvidence | null, explanation: Explanation, extra: PaymentReceipt["findings"]): PaymentReceipt {
-    const receipt = this.receipt({ type, status, key: p.key, mandate: p.mandate, invoice: p.invoice, proposal: p.proposal, gate: p.gate, actual, started, moved, approval, evidence, explanation, extra });
+    const receipt = this.receipt({ type, status, key: p.key, mandate: p.mandate, invoice: p.invoice, proposal: p.proposal, gate: p.gate, form: p.document_form, actual, started, moved, approval, evidence, explanation, extra });
     this.ledger.append(receipt);
     return receipt;
   }
 
-  private receipt(a: { type: ReceiptType; status: ReceiptStatus; key: string; mandate: SpendMandate; invoice: Invoice; proposal: Proposal; gate: GateResult;
+  private receipt(a: { type: ReceiptType; status: ReceiptStatus; key: string; mandate: SpendMandate; invoice: Invoice; proposal: Proposal; gate: GateResult; form: string | null;
     actual: string; started: boolean; moved: boolean; approval: PaymentReceipt["boundary"]["approval"]; evidence: ProviderEvidence | null; explanation: Explanation; extra?: PaymentReceipt["findings"] }): PaymentReceipt {
     const findings = [...a.gate.findings, ...(a.extra ?? [])];
     const verdict = a.moved ? "pass" : findings.some((f) => f.impact === "fail") ? "fail" : "hold";
@@ -351,6 +365,7 @@ export class PaymentDesk {
       explanation_code: a.explanation.code,
       explanation_params: a.explanation.params,
       evidence: a.evidence,
+      ...(a.form ? { document_form: a.form } : {}),
       corrections: [],
     };
   }

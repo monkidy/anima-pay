@@ -53,12 +53,15 @@ only through three locks, in order:
 2. **The payer's approval on PayPal itself.** Orders use intent `AUTHORIZE`: funds are held, not taken.
 3. **A person's release in ANIMA**, required above what the agent has earned and whenever the model,
    the council or the gate has a doubt (possible duplicate, price change, dissent, the model advising
-   to wait). Only then is the authorization captured.
+   to wait, an invoice whose text differs from the ones that autonomy was earned on). Only then is the
+   authorization captured.
 
 The model can only make a decision **stricter**. Its PAY never opens a gate the mandate keeps shut; its
 REFUSE is sealed as a refusal before any PayPal call; anything malformed, missing or unreachable becomes
-WAIT. What the model *read* is compared with the invoice you *recorded*, so a model fooled by injected
-text no longer matches and is stopped by the gate before PayPal is ever called.
+WAIT. What the model *read* is compared with the invoice you *recorded*, so a model fooled into reading
+another payee, amount or currency is stopped by the gate before PayPal is ever called. A model fooled
+into approving while reading the right fields passes that comparison; it still meets the next locks
+([limits](#honest-limits)).
 
 Every payment outcome leaves a sealed receipt: what was asked, what ran, what did not run, and PayPal's
 own status as evidence. Corrections are appended beside what they correct, never written over it (the
@@ -87,9 +90,12 @@ autonomy at work, and an agent using PayPal's own agent tools behind the same lo
   (`PAYPAL_API_SETUP_ERROR`), *sent, no answer* (`PAYPAL_API_NO_RESPONSE`) and *PayPal's answer*.
   Only the last is ever sealed as PayPal's decision ([`src/tooldesk.ts`](src/tooldesk.ts)). A 403
   inside a 200 envelope is a failure, not a success.
-- **Prompt-injection resistance by construction.** The invoice is untrusted data, the answer is parsed
-  strictly, and the gate compares what was read with what was recorded ([`src/gate.ts`](src/gate.ts)).
-- **Tests.** 199 Node tests in this repository (`npm test`, Node 24, zero runtime dependencies),
+- **Invoice text treated as untrusted, in code.** The invoice is data, never instructions; the model's
+  answer is parsed strictly; the gate compares what was read with what was recorded
+  ([`src/gate.ts`](src/gate.ts)); earned autonomy covers only documents of the form a person already
+  released ([`src/form.ts`](src/form.ts)). This limits what injected text can do. It does not make ANIMA
+  injection-proof ([limits](#honest-limits)).
+- **Tests.** 226 Node tests in this repository (`npm test`, Node 24, zero runtime dependencies),
   including hostile cases: forged ledgers, cut ledgers, a fooled model, rebinding attacks on the local
   desk, PayPal tool failures of every kind.
 - **Hosted-demo hardening.** A session and a desk per visitor, per-desk PayPal invoice and request ids,
@@ -119,11 +125,13 @@ PayPal's own tools without being handed the keys.
 
 ## Innovation
 
-1. **The model can only harden a decision.** It is an advisor below the gate, never above it: a fooled
-   model is stopped before PayPal, and its refusal is final.
+1. **The model can only harden a decision.** It is an advisor below the gate, never above it: a model
+   fooled into another payee or amount is stopped before PayPal, and its refusal is final.
 2. **Autonomy is earned by receipts.** The agent starts with none (even 29 EUR waits for a person).
    After three clean, sealed payments to the same payee it may *propose* paying alone up to a higher
-   amount; nothing changes until a person seals that grant, and an anomaly takes it back.
+   amount; nothing changes until a person seals that grant, and an anomaly takes it back. The grant
+   covers only invoices of the same form as the receipts it rests on: any other text goes back to a
+   person, and the grant stays.
 3. **Receipts for what did not happen.** A refusal, a hold, a decline, a call never sent: each is
    evidence, sealed with PayPal's status.
 4. **Truth under a real outage.** "Not sent", "no answer" and "PayPal refused" are three different
@@ -263,6 +271,14 @@ Dated, from real runs; PayPal ids are masked to their last 4 characters.
 The sealed sandbox ledgers these files cite are not published: their seals cover PayPal's ids, so a
 masked copy would no longer verify, which is the point of a seal.
 
+**Synthetic probes, not real runs.** Written by the author of the code, not blind, no model and no PayPal.
+Each folder says what it does not show, and `node experiments/<folder>/run.ts` replays it.
+
+| Folder | What it measures |
+|---|---|
+| [`experiments/payment-boundary-v1`](experiments/payment-boundary-v1/README.md) | 30 hand-labelled cases on the real gate. The gate alone: 27 agree with the labels, 2 injections go through, 0 of 10 legitimate cases delayed. Where a person's grant decides: 28 agree, 0 injections go through, 1 of 10 delayed |
+| [`experiments/autonomy-form-v1`](experiments/autonomy-form-v1/README.md) | 35 documents on the real application with every model voice fooled, once a grant is sealed. Of 18 hostile documents, 16 reach a person and 2 do not (the limits below). Of 17 ordinary vendor changes, 5 are paid alone and 12 wait. With the check switched off: all 35 paid alone |
+
 ## Run it locally
 
 ```bash
@@ -300,6 +316,22 @@ scripted answers and its label says so. On anything but loopback the server refu
 
 ## Honest limits
 
+- **Not injection-proof.** The model can be fooled, and the three voices are one model asked three times,
+  not three independent models. The locks limit what a fooled model can do; they do not stop it being
+  fooled.
+- **Earned autonomy compares the form of an invoice; it does not know who wrote it.** Once a person has
+  sealed a grant, an invoice whose text differs from the paid invoices behind that grant, beyond its
+  number, date and amount, goes back to a person ([`src/form.ts`](src/form.ts)). If every model voice is
+  fooled, two cases still pass without a new release: a forged invoice in exactly the same form, and a
+  hidden line that was already in the documents the person released. What bounds them is the mandate's
+  payee, the grant's ceiling and the payer's approval on PayPal. A correction takes the grant back for
+  later payments; it does not undo a capture. No independent source (the merchant, PayPal's invoicing)
+  confirms an invoice yet, and the invoice you record is taken as true.
+- **That check has a cost.** It reads no meaning, so a harmless change counts: a new footer, a due date,
+  a renamed plan each send that invoice to a person, and a vendor printing a value unique to each invoice
+  (a payment reference) would wait every month. That is a wait, not a lost payment, and the grant stays.
+  We do not know how often real vendors change their invoices: the figures above count kinds of change,
+  not a rate.
 - **Sandbox only.** No live PayPal endpoint is reachable from this code.
 - **A person signing in to PayPal as the payer** is supported (return address, live status) but not
   yet observed in our recorded runs: there, PayPal's published sandbox test card stood in for the

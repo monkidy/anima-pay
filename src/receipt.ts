@@ -63,6 +63,8 @@ export interface PaymentReceipt {
   explanation_code: string;
   explanation_params: Record<string, string | number>;
   evidence: ProviderEvidence | null;
+  /** The form of the document the model read (src/form.ts): what a grant resting on this receipt covers. */
+  document_form?: string;
   corrections: Correction[];
 }
 

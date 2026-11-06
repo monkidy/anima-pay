@@ -184,6 +184,7 @@ const I18N = {
       HUMAN_RELEASE_MISSING: "En attente du déblocage par une personne.",
       DECLINED_BY_HUMAN: "Refusé : {message}",
       COUNCIL_DISSENT: "Le conseil n'est pas d'accord ; chaque voix est écrite dans le reçu.",
+      DOCUMENT_FORM_NOT_EARNED: "Le texte de cette facture diffère de ceux sur lesquels cette autonomie a été gagnée, au-delà de son numéro, de sa date et de son montant. Une personne doit le lire.",
       TOOL_NOT_CLASSIFIED: "{tool} n'est pas un outil connu du pare-feu ; un outil inconnu est refusé.",
       TOOL_CLASS_NOT_IN_MANDATE: "Le mandat n'autorise pas les outils de ce type ({tool}).",
       AMOUNT_UNKNOWN: "Le montant en jeu n'a pas pu être lu chez PayPal ; une personne doit décider.",

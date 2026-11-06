@@ -25,8 +25,10 @@ export function checkPayment(input: {
   proposal: Proposal;
   history: readonly PastPayment[];
   now: Date;
+  /** Set when a grant is what lets this payment go without a person: this document's form, and the forms of the payments behind the grant. */
+  document?: { form: string | null; earned: readonly string[] };
 }): GateResult {
-  const { mandate, invoice, proposal, history, now } = input;
+  const { mandate, invoice, proposal, history, now, document } = input;
   const findings: Finding[] = [];
   type Params = Finding["params"];
   const fail = (id: string, message: string, params?: Params) => findings.push({ id, impact: "fail", message, ...(params ? { params } : {}) });
@@ -66,6 +68,11 @@ export function checkPayment(input: {
     const voices = [c.adversary.stance === "OBJECT" ? `Adversary: ${c.adversary.reasons.join(" ")}` : "",
       c.verifier.stance === "OBJECT" ? `Verifier: ${c.verifier.reasons.join(" ")}` : ""].filter(Boolean);
     hold("COUNCIL_DISSENT", `The council did not agree. ${voices.join(" ")}`, { adversary: c.adversary.stance, verifier: c.verifier.stance });
+  }
+
+  // Earned autonomy covers the documents it was earned on. Another one goes to a person; the grant stays.
+  if (document && invoice.amount_cents <= mandate.human_release_above_cents && !(document.form && document.earned.includes(document.form))) {
+    hold("DOCUMENT_FORM_NOT_EARNED", "This invoice's text differs from the documents this autonomy was earned on, beyond its number, date and amount. A person must read it.");
   }
 
   const human_release_required = invoice.amount_cents > mandate.human_release_above_cents ||

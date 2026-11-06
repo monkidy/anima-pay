@@ -293,7 +293,8 @@ export class AnimaApp {
 
   private newDesk(): PaymentDesk {
     return new PaymentDesk({ paypal: this.paypal, ledger: this.ledger, imported: () => this.imported,
-      releaseThreshold: (m, merchant) => this.trust(merchant).granted_cents, returnUrl: this.returnUrl,
+      releaseThreshold: (m, merchant) => this.trust(merchant).granted_cents,
+      earnedForms: (merchant) => this.trust(merchant).earned_forms, returnUrl: this.returnUrl,
       paypalScope: this.sharedPayPal ? randomBytes(4).toString("hex") : undefined });
   }
 
@@ -347,7 +348,7 @@ export class AnimaApp {
       ? seat(advice, voices.adversary, voices.verifier, model)
       : await deliberate(this.advisor as unknown as Completer, { invoiceText: text, recorded, recentPayments: recent }, advice);
     const proposal = { ...toProposal(invoice, advice, model), council };
-    const out = await this.desk.review(MANDATE, invoice, proposal);
+    const out = await this.desk.review(MANDATE, invoice, proposal, text);
     return out.kind === "refused"
       ? { scene: scene.n, title: scene.title, advice, council, model, outcome: "refused", receipt: out.receipt }
       : { scene: scene.n, title: scene.title, advice, council, model, outcome: "awaiting_payer", pending_key: out.pending.key };
