@@ -265,6 +265,7 @@ Dated, from real runs; PayPal ids are masked to their last 4 characters.
 | File | What it shows |
 |---|---|
 | [`real-sandbox-2026-10-23.public.txt`](docs/evidence/real-sandbox-2026-10-23.public.txt) | 23 Oct 2026, real PayPal sandbox and real model: authorize, a person's release, capture COMPLETED (29.00 EUR) read back from PayPal; a duplicate held and declined; PayPal's tools: a refund held, released and executed by PayPal (capture then REFUNDED), a fake dispute and a cancellation held and declined, PayPal never asked |
+| [`real-payer-2026-11-06.public.txt`](docs/evidence/real-payer-2026-11-06.public.txt) | 6 Nov 2026, hosted demo: a person signs in to PayPal as the sandbox payer, approves and releases; capture COMPLETED (29.00 EUR) read back directly from PayPal |
 | [`real-council-2026-10-23.txt`](docs/evidence/real-council-2026-10-23.txt) | 23 Oct 2026, the three voices on the real model for each scene, word for word; the model reads 12.00 EUR, not the hidden 999.00 |
 | [`live-haiku-scenes-2026-10-29.json`](docs/evidence/live-haiku-scenes-2026-10-29.json) | 29 Oct 2026, scenes 1 to 4 run 10 times each on the hosted demo's live model (Claude Haiku 5.5): 40 runs, no error; scene 3 answered REFUSE 10 times out of 10. Recorded before a model's REFUSE became a sealed refusal before PayPal: in this file those runs still end waiting for the payer |
 
@@ -333,9 +334,10 @@ scripted answers and its label says so. On anything but loopback the server refu
   We do not know how often real vendors change their invoices: the figures above count kinds of change,
   not a rate.
 - **Sandbox only.** No live PayPal endpoint is reachable from this code.
-- **A person signing in to PayPal as the payer** is supported (return address, live status) but not
-  yet observed in our recorded runs: there, PayPal's published sandbox test card stood in for the
-  payer, and every such receipt says so.
+- **A person signing in to PayPal as the payer** was observed once, on 6 November 2026 on the hosted
+  demo, and read back from PayPal ([evidence](docs/evidence/real-payer-2026-11-06.public.txt)). It was the
+  author, on a sandbox test account: no stranger has done it. In our other recorded runs PayPal's
+  published sandbox test card stood in for the payer, and every such receipt says so.
 - **The signing key lives with the server.** The ledger proves tampering after you pin; it does not
   prove that the server was honest before.
 - **PayPal's hosted tool server** has been failing since 29 October 2026 (above); while it fails,

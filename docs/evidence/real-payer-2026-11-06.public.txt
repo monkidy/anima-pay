@@ -1,0 +1,43 @@
+Public copy, masked. PayPal ids keep only their last 4 characters, and the sandbox accounts keep only the
+last 4 characters of their name. Nothing else is changed. The sealed ledger entry stays private: its seal
+covers those ids, so a masked copy would (rightly) no longer verify.
+
+ANIMA: a person signs in to PayPal as the payer, 6 November 2026 (UTC)
+======================================================================
+
+Where: the hosted demo, https://anima-demo.onrender.com, on the release that closes the earned-autonomy gap.
+Screen mode reported by the app:
+{"paypal":"paypal-sandbox","advisor":"claude-haiku-5-5","tools":"paypal-sandbox-mcp","simulated":false}
+
+Who did what: the author signed in on PayPal's page with a PayPal sandbox buyer account, approved, then
+clicked the release button himself. His AI assistant opened the pages, started the scene and typed the
+buyer's email address. It did not type the password and did not click approve or release: the release lock
+is for a person, so an agent clicking it would have made this receipt false.
+
+1. Scene 1, invoice DT-2611, 29.00 EUR to billing@design-tool.example.
+   Three model voices on claude-haiku-5-5: PAY, no objection, no objection. The mandate passes.
+   Finding: "A person must release this payment before capture."
+
+2. "Approve on PayPal" opens PayPal's own sandbox page. The person signs in as the sandbox buyer and
+   approves. Back on the desk, the page reads: "PayPal confirms the payer approved".
+
+3. The person releases. The receipt, 15:05:08Z:
+   receipt_type ACTION_RECEIPT, status COMPLETED, money_moved true (test money)
+   boundary.approval payer_and_human_release
+   evidence.capture_status COMPLETED
+   evidence.payer_source sb-...2049@personal.example.com
+   No test card stood in for the payer on this receipt.
+   Order ...923X, authorization ...340N, capture ...9522.
+
+4. Read back directly from PayPal's sandbox API with the app's credentials, not through ANIMA:
+   GET /v2/checkout/orders/...923X
+     status COMPLETED, intent AUTHORIZE
+     payment_source.paypal: sb-...2049@personal.example.com, account_status VERIFIED
+   GET /v2/payments/captures/...9522
+     status COMPLETED, 29.00 EUR, PayPal fee 1.24 EUR, net 27.76 EUR, created 15:05:07Z
+
+5. Ledger head after this run: count 1, head d3964951b533057ee3eb4f49015912c5fc7e2c7a50d17cc1a7e2ae6440fdef45,
+   key_id 095f649825e59e217278c840a7b1d0b08ebb7213a2a06a7df81ed8d5fb3db6de.
+
+What this does not show: it is one run, by the author, on a test account, with test money. No stranger has
+done it, and it says nothing about whether a stranger would understand the page.
