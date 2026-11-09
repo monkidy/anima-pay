@@ -2,7 +2,7 @@
   "name": "anima-pay",
   "version": "0.1.0",
   "private": true,
-  "description": "Agents can spend. Make them bring receipts. An AI payment assistant on the PayPal sandbox where only a mandate and a human can release money, and every payment that does not happen is explained and proven.",
+  "description": "Agents can spend. Make them bring receipts. A PayPal sandbox payment assistant with mandate and payer checks, required human release or prior human-signed scoped autonomy, and sealed receipts for money moved or refused.",
   "license": "Apache-2.0",
   "author": "Hichem Benali",
   "type": "module",
