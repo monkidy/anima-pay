@@ -3,8 +3,10 @@
 **Agents can spend. Make them bring receipts.**
 
 ANIMA is a gate between an AI agent and PayPal. The agent reads an invoice and proposes a payment;
-money moves only through three locks: a mandate you wrote, the payer's approval on PayPal itself
-(Orders v2, intent `AUTHORIZE`), and a person's release. Every payment outcome, including the payments
+a capture requires three checks: a mandate you wrote, the payer's approval on PayPal itself
+(Orders v2, intent `AUTHORIZE`), and human authority — a per-payment release when required, or
+a narrowly scoped, previously signed human grant that is still valid. No grant bypasses
+the mandate or the payer's approval. Every payment outcome, including the payments
 that did **not** happen, is a receipt sealed into a signed ledger that you can try to break yourself,
 in your browser.
 
@@ -46,15 +48,16 @@ in your browser.
 
 ## What it does
 
-An AI assistant reads your invoices and proposes payments. It can suggest; it cannot pay. Money moves
-only through three locks, in order:
+An AI assistant reads your invoices and proposes payments. It cannot bypass the payment gate.
+A capture is possible only after three checks, in order:
 
 1. **The mandate** you wrote: payees, currency, per-payment and 30-day limits, expiry.
 2. **The payer's approval on PayPal itself.** Orders use intent `AUTHORIZE`: funds are held, not taken.
-3. **A person's release in ANIMA**, required above what the agent has earned and whenever the model,
-   the council or the gate has a doubt (possible duplicate, price change, dissent, the model advising
-   to wait, an invoice whose text differs from the ones that autonomy was earned on). Only then is the
-   authorization captured.
+3. **Human authority in ANIMA.** A person releases a payment if required (above the earned limit,
+   or when there is a doubt: duplicate, price change, dissent, model WAIT, or invoice form not covered
+   by the grant). Otherwise, only a **previously human-signed, still-valid grant** scoped to that payee,
+   amount and previously approved invoice form permits capture without another click.
+   Mandate and grant permissions are checked again immediately before capture.
 
 The model can only make a decision **stricter**. Its PAY never opens a gate the mandate keeps shut; its
 REFUSE is sealed as a refusal before any PayPal call; anything malformed, missing or unreachable becomes
@@ -74,8 +77,8 @@ autonomy at work, and an agent using PayPal's own agent tools behind the same lo
 ## Technical implementation
 
 - **Real PayPal sandbox, end to end.** Orders v2 with `AUTHORIZE`, idempotent `PayPal-Request-Id`,
-  return and cancel addresses, live order status, capture only after a person's release, void on a
-  decline. The whole money path was observed on the real sandbox on 23 October 2026 and read back from
+  return and cancel addresses, live order status, capture only after required individual
+  release or a valid signed scoped grant, void on a decline. The whole money path was observed on the real sandbox on 23 October 2026 and read back from
   PayPal directly ([evidence](docs/evidence/real-sandbox-2026-10-23.public.txt)).
 - **PayPal's own agent tools behind the locks.** ANIMA speaks MCP to PayPal's hosted sandbox server
   (SSE transport) and classes all 46 tools it lists ([`src/guard.ts`](src/guard.ts)). An unclassed
@@ -163,7 +166,7 @@ endpoint ([`src/paypal.ts`](src/paypal.ts), [`src/mcp.ts`](src/mcp.ts)).
 | Payer approves on PayPal | the order's payer-action link opens PayPal's own sandbox page; or PayPal's published sandbox test card stands in for the payer, and the receipt says so |
 | Live status | `GET /v2/checkout/orders/{id}`: a release before the payer's approval is blocked by PayPal's own status |
 | Authorize | `POST /v2/checkout/orders/{id}/authorize` |
-| Capture, after a person's release | `POST /v2/payments/authorizations/{id}/capture` (`final_capture: true`) |
+| Capture, after required release or a valid signed scoped grant | `POST /v2/payments/authorizations/{id}/capture` (`final_capture: true`) |
 | Decline after authorization | `POST /v2/payments/authorizations/{id}/void` |
 | Read back | `GET /v2/payments/authorizations/{id}`, `GET /v2/payments/captures/{id}` |
 
@@ -250,7 +253,7 @@ The diagram is at the top of this page; the same in text:
           | duplicates, price jumps  |  PayPal         not sent != refused;
           +------------+-------------+                 outage -> labelled simulator
  LOCK 2   PayPal Orders v2, AUTHORIZE: the payer approves on PayPal |
- LOCK 3   a person releases in ANIMA -> capture (or void)           |
+ LOCK 3   required human release OR valid signed grant -> capture   |
                        |                                            |
           +------------v--------------------------------------------v--+
           | Sealed ledger: SHA-256 chain, Ed25519 seals, signed head  |
@@ -265,7 +268,7 @@ Dated, from real runs; PayPal ids are masked to their last 4 characters.
 | File | What it shows |
 |---|---|
 | [`real-sandbox-2026-10-23.public.txt`](docs/evidence/real-sandbox-2026-10-23.public.txt) | 23 Oct 2026, real PayPal sandbox and real model: authorize, a person's release, capture COMPLETED (29.00 EUR) read back from PayPal; a duplicate held and declined; PayPal's tools: a refund held, released and executed by PayPal (capture then REFUNDED), a fake dispute and a cancellation held and declined, PayPal never asked |
-| [`real-payer-2026-11-06.public.txt`](docs/evidence/real-payer-2026-11-06.public.txt) | 6 Nov 2026, hosted demo: a person signs in to PayPal as the sandbox payer, approves and releases; capture COMPLETED (29.00 EUR) read back directly from PayPal |
+| [`real-payer-2026-11-06.public.txt`](docs/evidence/real-payer-2026-11-06.public.txt) | 6 Nov 2026, hosted demo: the author (not an independent test participant) signed in as the PayPal sandbox payer, approved and released the payment; a 29.00 EUR **sandbox** capture was read back as COMPLETED from PayPal. No real money or independent buyer is claimed. |
 | [`real-council-2026-10-23.txt`](docs/evidence/real-council-2026-10-23.txt) | 23 Oct 2026, the three voices on the real model for each scene, word for word; the model reads 12.00 EUR, not the hidden 999.00 |
 | [`live-haiku-scenes-2026-10-29.json`](docs/evidence/live-haiku-scenes-2026-10-29.json) | 29 Oct 2026, scenes 1 to 4 run 10 times each on the hosted demo's live model (Claude Haiku 5.5): 40 runs, no error; scene 3 answered REFUSE 10 times out of 10. Recorded before a model's REFUSE became a sealed refusal before PayPal: in this file those runs still end waiting for the payer |
 
