@@ -1,4 +1,4 @@
-<p align="center"><picture><source media="(max-width: 600px)" srcset="docs/visual/anima-hero-mobile-v3.webp"><img src="docs/visual/anima-hero-v3.webp" alt="ANIMA, an original illustration of two overlapping permission rings, not an official security certification. PayPal sandbox only." width="100%"></picture></p>
+<p align="center"><picture><source media="(max-width: 600px)" srcset="docs/visual/anima-hero-v4-mobile.webp"><img src="docs/visual/anima-hero-v4-desktop.webp" alt="ANIMA. Three illustrated gates: mandate, payer approval and human authority. PayPal sandbox, test money only." width="100%"></picture></p>
 
 # ANIMA
 
