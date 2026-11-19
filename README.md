@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/visual/anima-hero.png" alt="ANIMA — editorial diagram of three separate locks: mandate, payer approval, and human authority. PayPal sandbox only." width="100%"></p>
+<p align="center"><img src="docs/visual/anima-hero-v3.webp" alt="ANIMA, an original illustration of two overlapping permission rings, not an official security certification. PayPal sandbox only." width="100%"></p>
 
 # ANIMA
 
