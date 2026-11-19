@@ -1,21 +1,21 @@
+<p align="center"><img src="docs/visual/anima-hero.png" alt="ANIMA — editorial diagram of three separate locks: mandate, payer approval, and human authority. PayPal sandbox only." width="100%"></p>
+
 # ANIMA
 
-**Agents can spend. Make them bring receipts.**
+**An AI agent may propose a payment. It cannot authorize one just by saying yes.**
 
-ANIMA is a gate between an AI agent and PayPal. The agent reads an invoice and proposes a payment;
-a capture requires three checks: a mandate you wrote, the payer's approval on PayPal itself
-(Orders v2, intent `AUTHORIZE`), and human authority — a per-payment release when required, or
-a narrowly scoped, previously signed human grant that is still valid. No grant bypasses
-the mandate or the payer's approval. Every payment outcome, including the payments
-that did **not** happen, is a receipt sealed into a signed ledger that you can try to break yourself,
-in your browser.
+ANIMA is an experiment in gated AI payments. Before a PayPal **sandbox** capture, the system checks your mandate, PayPal's payer approval, and human authority: either an individual release or an earlier, still-valid, narrowly scoped human-signed grant. The mandate and payer approval remain mandatory. The ledger records what happened **and what did not happen**.
 
-**Live demo: https://anima-demo.onrender.com** (PayPal sandbox, test money only)
+[**Open the sandbox demo**](https://anima-demo.onrender.com) · [Test the tamper-evident ledger](#prove) · [Evidence](#evidence) · [Run locally](#run-it-locally)
 
-> **Cold start.** The demo runs on a free Render web service. A ping keeps it warm, but if it has
-> slept anyway, the first load can take up to about 30 seconds (we measured 22 s). After that it is
-> fast. Each visitor gets a private session; if a usage limit is reached, the page says so plainly and
-> points to running ANIMA locally (three commands, below).
+> **Status (19 November 2026):** submitted to the PayPal AI Hackathon on 11 November; result pending. No real-money payments. The demo uses test accounts and PayPal's sandbox.
+
+<details>
+<summary>Demo startup and usage limits</summary>
+
+The demonstration runs on a free Render web service. The first load can take around 30 seconds if it has slept (22 seconds in a measured cold start). Every visitor gets a private session; the page explains when a usage limit has been reached and offers a local run instead.
+
+</details>
 
 ### The 60-second path
 
