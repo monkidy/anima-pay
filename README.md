@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/visual/anima-hero-v3.webp" alt="ANIMA, an original illustration of two overlapping permission rings, not an official security certification. PayPal sandbox only." width="100%"></p>
+<p align="center"><picture><source media="(max-width: 600px)" srcset="docs/visual/anima-hero-mobile-v3.webp"><img src="docs/visual/anima-hero-v3.webp" alt="ANIMA, an original illustration of two overlapping permission rings, not an official security certification. PayPal sandbox only." width="100%"></picture></p>
 
 # ANIMA
 
